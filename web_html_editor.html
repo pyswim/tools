@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>HTML运行器 · 代码高亮 · 新页预览</title>
+    <!-- CodeMirror 核心库 + 主题 + 高亮模式 (轻量且强大) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/material-darker.min.css">
+    <!-- 可选: 增加代码折叠等插件样式，但不强制，保留干净体验 -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f5f7fc 0%, #eef2f8 100%);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+        }
+
+        /* 主卡片容器 */
+        .runner-container {
+            max-width: 1400px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(2px);
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        /* 头部 */
+        .header {
+            padding: 1.2rem 2rem;
+            background: rgba(255, 255, 255, 0.85);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .title-section h1 {
+            font-size: 1.7rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #1A2A3F, #2c3e66);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+
+        .title-section p {
+            font-size: 0.85rem;
+            color: #4a627a;
+            margin-top: 0.2rem;
+        }
+
+        .badge {
+            background: #e9edf2;
+            padding: 0.3rem 0.9rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #2c3e66;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge:before {
+            content: "✨";
+            font-size: 0.8rem;
+        }
+
+        /* 编辑器区域 */
+        .editor-wrapper {
+            padding: 1.5rem 1.8rem 1rem 1.8rem;
+            background: #1e2a36;  /* 深色衬底让编辑器更突出 */
+        }
+
+        /* CodeMirror 实例自定义：圆润边框，舒服字体 */
+        .CodeMirror {
+            height: auto;
+            min-height: 460px;
+            border-radius: 1.25rem;
+            font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 加强滚动条美观 */
+        .CodeMirror-scroll {
+            border-radius: 1rem;
+        }
+
+        /* 底部按钮栏 */
+        .action-bar {
+            padding: 1.2rem 2rem 2rem 2rem;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 1.2rem;
+            background: rgba(255, 255, 255, 0.75);
+            flex-wrap: wrap;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .info-tip {
+            font-size: 0.8rem;
+            color: #4b6b8f;
+            background: #f0f4f9;
+            padding: 0.4rem 0.9rem;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: auto;
+        }
+
+        .info-tip span {
+            font-weight: 500;
+        }
+
+        .run-btn {
+            background: linear-gradient(105deg, #0f2b3d, #1b4a6e);
+            border: none;
+            padding: 0.9rem 2.2rem;
+            border-radius: 3rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 12px rgba(0, 32, 64, 0.25);
+            letter-spacing: 0.5px;
+        }
+
+        .run-btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(105deg, #123a52, #1f5c88);
+            box-shadow: 0 12px 20px -8px rgba(0, 40, 70, 0.4);
+        }
+
+        .run-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* 简洁清秀的响应式 */
+        @media (max-width: 680px) {
+            body {
+                padding: 1rem;
+            }
+            .editor-wrapper {
+                padding: 1rem;
+            }
+            .action-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .info-tip {
+                margin-right: 0;
+                justify-content: center;
+            }
+            .run-btn {
+                justify-content: center;
+            }
+            .CodeMirror {
+                min-height: 320px;
+                font-size: 12px;
+            }
+            .header {
+                flex-direction: column;
+            }
+        }
+
+        /* 轻提示占位 */
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            padding: 0.8rem;
+            color: #6c8db0;
+            background: #f9fbfe;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+    <!-- CodeMirror 必要模块 (支持HTML混合高亮) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.js"></script>
+    <!-- 加载 XML 模式 (HTML基础) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/xml/xml.min.js"></script>
+    <!-- 加载 JavaScript 模式 (用于script标签内高亮) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/javascript/javascript.min.js"></script>
+    <!-- 加载 CSS 模式 (用于style标签内高亮) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/css/css.min.js"></script>
+    <!-- HTML混合模式 (同时高亮html/js/css) 重点 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/htmlmixed/htmlmixed.min.js"></script>
+    <!-- 可选辅助：自动缩进，提升体验 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/selection/active-line.min.js"></script>
+</head>
+<body>
+<div class="runner-container">
+    <div class="header">
+        <div class="title-section">
+            <h1>⚡ HTML 运行器</h1>
+            <p>代码高亮 · 实时编辑 · 新页面预览</p>
+        </div>
+        <div class="badge">
+            HTML / CSS / JS 混合高亮
+        </div>
+    </div>
+
+    <div class="editor-wrapper">
+        <!-- 文本输入区：CodeMirror 将会在此 textarea 上构建编辑器 -->
+        <textarea id="htmlCodeEditor" placeholder="粘贴或编写你的 HTML 代码，语法高亮自动支持..."></textarea>
+    </div>
+
+    <div class="action-bar">
+        <div class="info-tip">
+            📋 支持粘贴完整 HTML 结构 | 自动高亮 | 点击运行在新标签页展示
+        </div>
+        <button class="run-btn" id="runBtn">
+            ▶ 运行代码
+            <span style="font-size:1.1rem;">🚀</span>
+        </button>
+    </div>
+    <footer>
+        💡 提示: 代码编辑器已开启HTML混合高亮，直接粘贴即可着色。点击运行将在<strong>全新页面</strong>中渲染您的HTML代码。
+    </footer>
+</div>
+
+<script>
+    (function() {
+        // 获取 textarea 元素
+        const textarea = document.getElementById('htmlCodeEditor');
+        
+        // 默认示例代码 (一个现代简洁的HTML结构，展示高亮效果，让用户可快速体验)
+        const defaultHtml = `<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运行演示 · HTML运行器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(145deg, #f0f4fa 0%, #d9e2ef 100%);
+            font-family: system-ui, 'Segoe UI', 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .card {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(8px);
+            border-radius: 2rem;
+            padding: 2rem 2rem 2.5rem;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.2);
+            text-align: center;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        h1 {
+            font-size: 2.4rem;
+            background: linear-gradient(135deg, #1e3c4c, #2a5f7a);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 1rem;
+        }
+        p {
+            color: #2c4c6c;
+            line-height: 1.5;
+            margin: 1rem 0;
+            font-size: 1.1rem;
+        }
+        .badge-run {
+            background: #1f5e8e;
+            color: white;
+            display: inline-block;
+            padding: 0.5rem 1.2rem;
+            border-radius: 60px;
+            font-weight: 500;
+            margin-top: 1.2rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #0f2f40;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 40px;
+            color: white;
+            margin-top: 1rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>✨ HTML运行器 ✨</h1>
+        <p>代码已就绪，高亮编辑，点击下方按钮即可在新页面运行你的创意。</p>
+        <div class="badge-run">🚀 粘贴你自己的代码 ➕ 运行</div>
+        <button onclick="alert('演示页面 · 运行器工作正常')"> 交互测试 </button>
+        <p style="font-size:0.8rem; margin-top:1.5rem;">⬆️ 修改编辑器里的HTML, CSS, JS, 点击主面板运行按钮</p>
+    </div>
+</body>
+</html>`;
+
+        // 初始化 CodeMirror 编辑器 (开启HTML混合高亮 + 舒适主题 + 行号)
+        const editor = CodeMirror.fromTextArea(textarea, {
+            mode: "htmlmixed",           // HTML混合高亮模式 (完美支持标签/样式/脚本)
+            theme: "material-darker",    // 优雅深色主题，代码易读
+            lineNumbers: true,           // 显示行号
+            lineWrapping: true,          // 自动换行
+            autoCloseTags: true,         // 自动闭合标签 (提升编写体验)
+            autoCloseBrackets: true,     // 自动闭合括号/引号
+            matchBrackets: true,         // 括号高亮匹配
+            styleActiveLine: true,       // 高亮当前行
+            indentUnit: 4,               // 缩进4空格
+            tabSize: 4,
+            viewportMargin: Infinity,    // 自适应高度 (但保留min-height样式)
+            extraKeys: {
+                "Ctrl-Space": "autocomplete", // 简单自动补全提示(无需额外字典但保留快捷键)
+                "Ctrl-Q": function(cm) { cm.foldCode(cm.getCursor()); } // 可折叠代码(需addon，这里仅占位，不报错)
+            }
+        });
+        
+        // 设置默认高亮内容 (让用户打开即见示例，可清楚看到高亮效果)
+        editor.setValue(defaultHtml);
+        // 将光标置于文档开头，体验更好
+        editor.setCursor({line: 0, ch: 0});
+        // 刷新一次确保渲染正确
+        setTimeout(() => editor.refresh(), 30);
+
+        // 核心功能: 运行按钮 -> 获取编辑器中的HTML代码 -> 在新页面中运行
+        const runButton = document.getElementById('runBtn');
+        
+        function runHtmlInNewTab(htmlContent) {
+            // 边缘情况: 如果内容为空则提示用户，但最好给一个空白文档引导
+            if (!htmlContent || htmlContent.trim() === '') {
+                // 极简空内容提示，但仍然新建页面显示友好提示
+                htmlContent = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>空代码提示</title><style>body{background:#f2f4f8;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;}</style></head>
+<body><div style="text-align:center;"><h3>📄 暂无HTML代码</h3><p>请在编辑器中粘贴或编写HTML内容，再点击运行。</p></div></body>
+</html>`;
+            }
+            
+            // 创建 Blob 对象，MIME类型 text/html，支持UTF-8
+            let blob;
+            try {
+                blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            } catch(e) {
+                console.warn(e);
+                // 降级: 使用 data url 方式 (但一般blob都支持现代浏览器)
+                const fallbackUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent);
+                const newWin = window.open(fallbackUrl, '_blank');
+                if (newWin) newWin.focus();
+                else alert("无法打开新窗口，请检查浏览器弹窗拦截设置");
+                return;
+            }
+            
+            // 生成唯一对象URL
+            const blobUrl = URL.createObjectURL(blob);
+            
+            // 打开新标签页
+            const newWindow = window.open(blobUrl, '_blank');
+            
+            if (!newWindow) {
+                // 如果被浏览器拦截弹窗，提示用户允许弹出窗口
+                alert("⚠️ 新窗口被浏览器拦截，请允许此网站的弹出窗口后重试。\n或者可以手动允许弹窗后再点击运行。");
+                URL.revokeObjectURL(blobUrl); // 清除无用的URL
+                return;
+            }
+            
+            // 为了让新窗口获得焦点
+            newWindow.focus();
+            
+            // 注意: 由于 blob URL 在页面关闭后需要释放内存，但新窗口会持有该URL引用。
+            // 为避免内存堆积，监听新窗口关闭事件或延迟一段时间后 revoke
+            // 优雅处理: 当新窗口加载完成后，可以延迟 revoke，但为了安全避免资源失效，
+            // 采用监听窗口关闭事件较为稳妥。但由于跨域限制，监听新窗口的beforeunload可能不可靠。
+            // 简单方案: 延迟5秒后 revoke，不影响新窗口显示 (Blob URL生命周期独立)
+            // 大部分现代浏览器会在所有引用(新窗口)关闭后自动回收，但手动 revoke 更干净。
+            // 这里采用延时清除，确保新页面有足够时间加载内容。
+            setTimeout(() => {
+                try {
+                    URL.revokeObjectURL(blobUrl);
+                } catch(e) {}
+            }, 8000);
+        }
+        
+        // 绑定运行按钮事件
+        runButton.addEventListener('click', () => {
+            // 获取当前编辑器中的最新代码 (完全同步)
+            const currentCode = editor.getValue();
+            runHtmlInNewTab(currentCode);
+        });
+        
+        // 额外增强: 用户粘贴后确保编辑器视图刷新 (CodeMirror自动处理, 但是为了安全, 监听粘贴事件刷新)
+        // 并且满足“将html代码粘贴到输入框后可以将代码高亮”——CodeMirror原生支持，无需额外动作，但为了极少数异步情况再次refresh
+        const cmDom = editor.getWrapperElement();
+        if (cmDom) {
+            cmDom.addEventListener('paste', () => {
+                // 短暂延迟确保内容完全渲染高亮
+                setTimeout(() => {
+                    editor.refresh();
+                }, 10);
+            });
+        }
+        
+        // 确保任何情况下，编辑器都能完美高亮，例如窗口缩放或者resize时刷新
+        window.addEventListener('resize', () => {
+            editor.refresh();
+        });
+        
+        // 添加键盘快捷键提示: Ctrl+Enter 快速运行 (提升效率)
+        editor.addKeyMap({
+            "Ctrl-Enter": function(cm) {
+                const code = cm.getValue();
+                runHtmlInNewTab(code);
+            },
+            "Cmd-Enter": function(cm) {
+                const code = cm.getValue();
+                runHtmlInNewTab(code);
+            }
+        });
+        
+        // 在控制台输出友好提示
+        console.log('HTML运行器已启动 ✨ 支持代码高亮，点击运行在新页面预览');
+    })();
+</script>
+</body>
+</html>
