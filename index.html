@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>实用工具箱 | 在线工具集</title>
+    <!-- Font Awesome 6 (免费图标库) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f6f9fc 0%, #eef2f5 100%);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #1a2c3e;
+            line-height: 1.4;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        /* 模拟更优雅的字体 (如果支持 Inter) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* 头部区域 */
+        .hero {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #1f4e6e, #2c7da0);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.01em;
+            margin-bottom: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hero h1 i {
+            background: none;
+            color: #2c7da0;
+            font-size: 2.4rem;
+            background-clip: unset;
+            -webkit-background-clip: unset;
+        }
+
+        .hero .sub {
+            font-size: 1.2rem;
+            color: #4a627a;
+            max-width: 580px;
+            margin: 0.75rem auto 0;
+            font-weight: 450;
+            border-top: 1px solid rgba(44, 125, 160, 0.2);
+            display: inline-block;
+            padding-top: 0.8rem;
+        }
+
+        .badge-tools {
+            display: inline-block;
+            background: #e9f0f5;
+            backdrop-filter: blur(4px);
+            padding: 0.3rem 1rem;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #1f5e7e;
+            margin-top: 1rem;
+        }
+
+        /* 工具网格列表 — 核心列表布局，便于扩展 */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            list-style: none;
+            margin: 2rem 0 2.5rem;
+            padding: 0;
+        }
+
+        /* 卡片样式 */
+        .tool-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(0px);
+            border-radius: 2rem;
+            box-shadow: 0 12px 28px -8px rgba(0, 32, 48, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.01);
+            padding: 1.8rem 1.6rem 1.8rem 1.6rem;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .tool-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 24px 40px -14px rgba(27, 55, 74, 0.2), 0 0 0 1px rgba(44, 125, 160, 0.2);
+            background: #ffffff;
+            border-color: rgba(44, 125, 160, 0.3);
+        }
+
+        /* 图标区域 */
+        .tool-icon {
+            font-size: 2.8rem;
+            color: #2c7da0;
+            margin-bottom: 1.2rem;
+            background: #eef4f9;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .tool-card:hover .tool-icon {
+            background: #e2edf5;
+            transform: scale(1.02);
+        }
+
+        .tool-title {
+            font-size: 1.65rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: #0f2c3b;
+            margin-bottom: 0.6rem;
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .tool-title span {
+            background: #eef2f5;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.2rem 0.6rem;
+            border-radius: 30px;
+            color: #2c7da0;
+        }
+
+        .tool-desc {
+            color: #3e5a6b;
+            font-size: 0.95rem;
+            line-height: 1.45;
+            margin: 0.5rem 0 1.5rem 0;
+            flex: 1;
+        }
+
+        /* 链接按钮 */
+        .tool-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: #f0f5f9;
+            padding: 0.7rem 1.2rem;
+            border-radius: 3rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1f5e7e;
+            text-decoration: none;
+            transition: 0.2s;
+            border: 1px solid #dce7ef;
+            width: fit-content;
+            margin-top: 0.4rem;
+        }
+
+        .tool-link i {
+            font-size: 0.85rem;
+            transition: transform 0.2s;
+        }
+
+        .tool-link:hover {
+            background: #2c7da0;
+            color: white;
+            border-color: #2c7da0;
+            box-shadow: 0 6px 12px -6px rgba(44, 125, 160, 0.3);
+        }
+
+        .tool-link:hover i {
+            transform: translateX(4px);
+            color: white;
+        }
+
+        /* 页脚及扩展提示 */
+        .footer-note {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(44, 125, 160, 0.2);
+            color: #4a6c81;
+            font-size: 0.85rem;
+        }
+
+        .add-hint {
+            background: #eef2f6;
+            border-radius: 60px;
+            padding: 0.5rem 1.2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            margin-top: 0.8rem;
+            color: #1f5e7e;
+        }
+
+        .add-hint i {
+            font-size: 0.9rem;
+        }
+
+        /* 响应式细节 */
+        @media (max-width: 680px) {
+            body {
+                padding: 1.5rem 1rem;
+            }
+            .hero h1 {
+                font-size: 2rem;
+            }
+            .hero h1 i {
+                font-size: 1.8rem;
+            }
+            .hero .sub {
+                font-size: 1rem;
+            }
+            .tools-grid {
+                gap: 1.3rem;
+            }
+            .tool-card {
+                padding: 1.4rem;
+            }
+            .tool-title {
+                font-size: 1.4rem;
+            }
+        }
+
+        /* 针对触摸优化 */
+        @media (hover: hover) {
+            .tool-link {
+                cursor: pointer;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 头部区域 -->
+    <div class="hero">
+        <h1>
+            <i class="fas fa-toolbox"></i> 
+            实用工具箱
+        </h1>
+        <div class="sub">轻量 · 高效 · 开箱即用</div>
+        <div class="badge-tools">
+            <i class="fas fa-cubes"></i> 当前收录工具 · 持续更新
+        </div>
+    </div>
+
+    <!-- 工具列表：有序列表，便于后续添加新工具 (直接复制li卡片修改即可) -->
+    <ul class="tools-grid">
+        <!-- 工具 1: HTML Editor -->
+        <li class="tool-card">
+            <div class="tool-icon">
+                <i class="fas fa-code"></i>
+            </div>
+            <div class="tool-title">
+                HTML 编辑器
+                <span>在线</span>
+            </div>
+            <div class="tool-desc">
+                实时编写、预览 HTML/CSS/JS 代码，高亮显示，适合前端调试与快速原型设计。
+            </div>
+            <!-- 使用相对路径示例，实际部署请替换为真实工具链接 -->
+            <a href="./web_html_editor.html" class="tool-link" target="_self" rel="noopener noreferrer">
+                打开工具 <i class="fas fa-arrow-right"></i>
+            </a>
+            <!-- 提示：将 href 替换成您的工具实际地址，例如 /editor.html 或 /html-editor/ -->
+        </li>
+
+        <!-- 工具 2: GPS Tracer (GPS轨迹记录器) -->
+        <li class="tool-card">
+            <div class="tool-icon">
+                <i class="fas fa-map-marked-alt"></i>
+            </div>
+            <div class="tool-title">
+                GPS 轨迹记录器
+                <span>追踪</span>
+            </div>
+            <div class="tool-desc">
+                上传GPX/KML文件，可视化轨迹，分析距离、海拔与速度，户外运动必备。
+            </div>
+            <a href="./gps-tracer/index.html" class="tool-link" target="_self" rel="noopener noreferrer">
+                打开工具 <i class="fas fa-arrow-right"></i>
+            </a>
+        </li>
+
+        <!-- 工具 3: 华为动态图片转换器 -->
+        <li class="tool-card">
+            <div class="tool-icon">
+                <i class="fas fa-images"></i>
+            </div>
+            <div class="tool-title">
+                华为动态图片转换
+                <span>格式转换</span>
+            </div>
+            <div class="tool-desc">
+                将华为动态照片（.jpg + .mp4 或 HEIC）转换为 GIF / WebP / 视频，轻松分享精彩瞬间。
+            </div>
+            <a href="./huawei-dynamic-converter/index.html" class="tool-link" target="_self" rel="noopener noreferrer">
+                打开工具 <i class="fas fa-arrow-right"></i>
+            </a>
+        </li>
+
+        <!-- 
+            🛠️ 后续添加新工具示范：
+            只需复制上方 <li>...</li> 代码块，粘贴到此列表末尾，修改内部内容即可。
+            包括图标类（fontawesome）、标题、描述和链接地址。
+            示例：
+            <li class="tool-card">
+                <div class="tool-icon"><i class="fas fa-palette"></i></div>
+                <div class="tool-title">色彩提取器<span>实用</span></div>
+                <div class="tool-desc">从图像中智能提取配色方案，导出CSS变量。</div>
+                <a href="./color-picker/index.html" class="tool-link">打开工具 <i class="fas fa-arrow-right"></i></a>
+            </li>
+        -->
+    </ul>
+
+    <!-- 扩展提示卡片区，美观展示后续扩展方式 -->
+    <div class="footer-note">
+        <div class="add-hint">
+            <i class="fas fa-plus-circle"></i> 轻松扩展工具箱 · 复制上方任意卡片即可添加新工具
+        </div>
+        <p style="margin-top: 1rem; opacity: 0.75;">
+            <i class="fas fa-link"></i> 所有工具链接默认为示例路径（如 ./html-editor/），<br>
+            请根据实际部署目录修改每个卡片的 <strong>href</strong> 属性，指向对应工具页面。
+        </p>
+        <p style="margin-top: 0.8rem; font-size: 0.75rem;">
+            ⚡ 响应式设计 | 卡片式列表 | 即改即用
+        </p>
+    </div>
+</div>
+
+<!-- 可选小脚本：为外部链接增加平滑感 (无需复杂逻辑，仅占位，保证部署干净) -->
+<script>
+    (function() {
+        // 纯增强体验：控制台友好提示，非必须。保留所有卡片链接原始行为
+        // 若需要全局修改默认示例提示，可取消注释下面代码块来提醒用户替换链接 (但为了简洁不干扰体验)
+        // 用户部署时自然需要替换链接，不添加额外弹窗，保持干净。
+        console.log("✅ 工具箱页面加载完成 | 添加新工具请复制卡片并修改链接 href 与内容");
+    })();
+</script>
+</body>
+</html>
