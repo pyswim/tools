@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Python科学计算器 | 缓存+进度 | NumPy SciPy Matplotlib</title>
+    <title>Python科学计算器 | 高亮编辑器 | NumPy/SciPy/Matplotlib</title>
+    <!-- CodeMirror 依赖 (语法高亮) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/python/python.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -133,25 +138,21 @@
             align-items: center;
         }
 
-        textarea {
-            width: 100%;
+        /* CodeMirror 容器样式覆盖 */
+        .CodeMirror {
             height: 450px;
-            background: #1e293b;
-            border: 1px solid #334155;
             border-radius: 1rem;
-            color: #e2e8f0;
-            font-family: 'Fira Code', 'Cascadia Code', monospace;
             font-size: 14px;
-            line-height: 1.5;
-            padding: 16px;
-            resize: vertical;
-            outline: none;
-            transition: 0.2s;
+            font-family: 'Fira Code', 'Cascadia Code', monospace;
+            border: 1px solid #334155;
+            background: #1e293b;
         }
-
-        textarea:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px #3b82f620;
+        .CodeMirror-gutters {
+            background: #0f172a;
+            border-right: 1px solid #334155;
+        }
+        .CodeMirror-linenumber {
+            color: #64748b;
         }
 
         .button-group {
@@ -330,9 +331,10 @@
     <div class="workspace">
         <div class="editor-panel">
             <div class="panel-label">
-                📝 代码编辑器
+                📝 代码编辑器 (语法高亮)
                 <span class="cache-note" id="cacheHint">📦 包缓存: 首次下载~80MB, 之后秒开</span>
             </div>
+            <!-- CodeMirror 将替换此 textarea -->
             <textarea id="codeEditor" placeholder='import numpy as np
 import matplotlib.pyplot as plt
 
@@ -355,7 +357,7 @@ print("SciPy已就绪")'></textarea>
                 <button id="resetEditorBtn">⟳ 重置示例</button>
             </div>
             <div class="tip">
-                💡 提示: 支持 NumPy, SciPy, Matplotlib (Agg) | 图表下方按钮可保存为PNG | 包加载进度可见, 缓存后秒开
+                💡 提示: 支持 NumPy, SciPy, Matplotlib (Agg) | 图表下方可保存PNG | 包加载进度可见, 缓存后秒开
             </div>
         </div>
         <div class="output-panel">
@@ -379,12 +381,12 @@ print("SciPy已就绪")'></textarea>
     // ---------- 全局变量 ----------
     let pyodideReady = false;
     let pyodide = null;
+    let codeMirrorEditor = null;      // CodeMirror 实例
     const statusDiv = document.getElementById('statusLabel');
     const progressBar = document.getElementById('loadProgress');
     const runBtn = document.getElementById('runBtn');
     const clearOutputBtn = document.getElementById('clearOutputBtn');
     const resetEditorBtn = document.getElementById('resetEditorBtn');
-    const codeEditor = document.getElementById('codeEditor');
     const textOutputDiv = document.getElementById('textOutput');
     const imageOutputDiv = document.getElementById('imageOutput');
 
@@ -422,7 +424,7 @@ print(f"✅ 积分测试: ∫₀^∞ e^(-t) dt = {result:.6f} (误差 {error:.2e
 print(f"📊 数据均值: {np.mean(data):.4f}, 标准差: {np.std(data):.4f}")
 print("🎉 科学计算库工作正常, 图表已生成并支持保存")`;
 
-    // 更新加载进度 (模拟精细度)
+    // 更新加载进度
     function setProgress(percent, message) {
         progressBar.style.width = `${Math.min(100, percent)}%`;
         statusDiv.innerHTML = message;
@@ -455,7 +457,6 @@ print("🎉 科学计算库工作正常, 图表已生成并支持保存")`;
         wrapper.textContent = content;
         textOutputDiv.innerHTML = '';
         textOutputDiv.appendChild(wrapper);
-        // 自动滚动到底部
         textOutputDiv.scrollTop = textOutputDiv.scrollHeight;
     }
 
@@ -500,7 +501,6 @@ print("🎉 科学计算库工作正常, 图表已生成并支持保存")`;
         imageOutputDiv.appendChild(gallery);
     }
     
-    // 下载图片工具函数
     function downloadImage(dataUrl, filename) {
         const link = document.createElement('a');
         link.href = dataUrl;
@@ -510,13 +510,14 @@ print("🎉 科学计算库工作正常, 图表已生成并支持保存")`;
         document.body.removeChild(link);
     }
 
-    // 运行 Python 代码 (核心)
+    // 运行 Python 代码 (从 CodeMirror 获取)
     async function runPythonCode() {
         if (!pyodideReady || !pyodide) {
             showTextOutput("⏳ Pyodide 尚未完全加载，请稍候... (首次加载需下载约80MB包，缓存后秒开)", true);
             return;
         }
-        const code = codeEditor.value;
+        // 从 CodeMirror 获取代码
+        const code = codeMirrorEditor ? codeMirrorEditor.getValue() : document.getElementById('codeEditor').value;
         if (!code.trim()) {
             showTextOutput("⚠️ 请输入 Python 代码", true);
             return;
@@ -569,54 +570,68 @@ run_user_code(${JSON.stringify(code)})
         }
     }
 
+    // 初始化 CodeMirror 编辑器
+    function initCodeMirror() {
+        const textarea = document.getElementById('codeEditor');
+        codeMirrorEditor = CodeMirror.fromTextArea(textarea, {
+            mode: 'python',
+            theme: 'material-darker',
+            lineNumbers: true,
+            indentUnit: 4,
+            tabSize: 4,
+            indentWithTabs: false,
+            lineWrapping: true,
+            autofocus: true,
+            extraKeys: {"Tab": "indentMore"}
+        });
+        // 设置初始内容
+        codeMirrorEditor.setValue(DEFAULT_CODE);
+        // 可选: 调整编辑器高度自适应
+        codeMirrorEditor.setSize(null, 450);
+    }
+
+    // 重置编辑器内容
+    function resetEditor() {
+        if (codeMirrorEditor) {
+            codeMirrorEditor.setValue(DEFAULT_CODE);
+        } else {
+            document.getElementById('codeEditor').value = DEFAULT_CODE;
+        }
+        clearOutput();
+        showTextOutput("📋 已重置为示例代码，点击「运行代码」体验科学计算", false);
+        imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">图表将显示在此处</div>';
+    }
+
     // ---------- Pyodide 初始化 + 加载进度 + 启用 IndexedDB 缓存 (自动) ----------
     async function initPyodide() {
         setProgress(5, "⏳ 加载 Pyodide 核心...");
         try {
-            // 加载 pyodide 主程序 (本身也会使用缓存)
             pyodide = await loadPyodide({
                 indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
-                // 启用缓存: Pyodide 内部会自动利用浏览器缓存，但为更好持久化可使用下面配置(实验)
-                // 官方推荐: 配合 service worker 或 普通缓存，但无需额外配置即走HTTP缓存。
-                // 为了显示包下载进度，我们手动加载并监听消息回调
             });
             setProgress(20, "📦 准备加载科学包: numpy, scipy, matplotlib ...");
             
-            // 定义进度回调函数 (显示每个包下载状态)
-            let loadedPackages = 0;
-            const totalPackages = 3; // numpy, scipy, matplotlib (依赖会自动下载)
-            // 因为 scipy 依赖很多，实际下载数 >3, 但这里展示主要包
-            const packageMessages = [];
-            
-            // 消息回调: 捕获 pyodide 加载包时的消息
+            let packageMessages = [];
             const messageCallback = (msg) => {
-                // msg 格式类似: "Downloading numpy-1.26.4-cp312-cp312-emscripten_3_1_45_wasm32.whl"
                 if (msg.includes("Downloading") || msg.includes("Loading")) {
                     let pkgName = msg.split(" ")[1]?.split("-")[0] || "package";
                     if (!packageMessages.includes(pkgName)) {
                         packageMessages.push(pkgName);
-                        let percent = 20 + Math.min(70, (packageMessages.length / 12) * 70); // 粗略依赖数~12个文件
+                        let percent = 20 + Math.min(70, (packageMessages.length / 12) * 70);
                         setProgress(percent, `📡 下载: ${pkgName} ...`);
                     }
                 } else if (msg.includes("loaded")) {
                     setProgress(60, `✔️ 模块准备中...`);
-                } else {
-                    // 展示其他信息
                 }
             };
             
-            // 加载 numpy (通常很快)
             await pyodide.loadPackage("numpy", { messageCallback });
             setProgress(45, "✅ numpy 加载完成, 加载 scipy (较大) ...");
-            
-            // 加载 scipy (依赖多)
             await pyodide.loadPackage("scipy", { messageCallback });
             setProgress(70, "✅ scipy 加载完成, 加载 matplotlib ...");
-            
             await pyodide.loadPackage("matplotlib", { messageCallback });
             setProgress(85, "✅ 核心科学包已加载, 配置环境...");
             
-            // 初始化 Python 代码 (输出捕获, show重写等)
             const initPythonCode = `
 import sys
 import io
@@ -691,13 +706,11 @@ def run_user_code(user_code: str):
         images_copy = _image_list.copy()
         return {"output": output_text, "images": images_copy}
 
-# 显示初始化成功信息
 print("[系统] Pyodide 环境就绪，支持 numpy, scipy, matplotlib")
 print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {matplotlib.__version__}")
 `;
             await pyodide.runPythonAsync(initPythonCode);
             
-            // 获取版本信息展示
             const versionOut = pyodide.runPython("_get_output()");
             if (versionOut && versionOut.trim()) {
                 showTextOutput(versionOut.trim(), false);
@@ -706,11 +719,13 @@ print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {mat
             }
             
             setProgress(100, "🎉 完全就绪 | 包已缓存至浏览器");
-            setStatus("✅ 就绪 | 科学包已缓存 (IndexedDB/HTTP缓存)", true);
+            setStatus("✅ 就绪 | 科学包已缓存", true);
             pyodideReady = true;
-            runBtn.disabled = false;
             
-            // 小提示: 缓存状态 (Pyodide 默认利用缓存, 但用户可见)
+            // 关键修复：加载完成后将运行按钮文字改为“运行”，并启用
+            runBtn.disabled = false;
+            runBtn.innerHTML = "▶ 运行代码";
+            
             const cacheMsg = document.getElementById('cacheHint');
             if (cacheMsg) cacheMsg.innerHTML = "💾 已启用持久缓存 | 再次访问无需下载";
             
@@ -720,22 +735,18 @@ print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {mat
             setStatus("❌ 初始化失败，检查网络或刷新页面", false);
             showTextOutput(`致命错误: 无法加载 Pyodide 或科学包\n${err}`, true);
             runBtn.disabled = true;
+            runBtn.innerHTML = "加载失败";
         }
-    }
-    
-    // 重置编辑器
-    function resetEditor() {
-        codeEditor.value = DEFAULT_CODE;
-        clearOutput();
-        showTextOutput("📋 已重置为示例代码，点击「运行代码」体验科学计算", false);
-        imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">图表将显示在此处</div>';
     }
     
     // 页面启动
     (function main() {
+        // 先初始化 CodeMirror 替换编辑器
+        initCodeMirror();
+        
+        // 按钮初始状态为禁用，等待 pyodide 加载完成后再启用并修改文字
         runBtn.disabled = true;
         runBtn.innerHTML = '⏳ 加载环境中...';
-        codeEditor.value = DEFAULT_CODE;
         
         runBtn.addEventListener('click', runPythonCode);
         clearOutputBtn.addEventListener('click', clearOutput);
