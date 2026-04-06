@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>Python科学计算器 | 保存/导入.py | 字体缩放 | NumPy/SciPy/Matplotlib</title>
+    <title>Python科学计算器 | 全屏编辑 | 保存/导入.py | 字体缩放</title>
     <!-- CodeMirror 依赖 (语法高亮) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
@@ -115,6 +115,7 @@
             background: #0f172a;
             padding: 18px;
             border-right: 1px solid #334155;
+            transition: all 0.2s;
         }
 
         .output-panel {
@@ -340,7 +341,7 @@
                 min-width: 140px;
             }
         }
-        /* 隐藏文件输入 */
+        /* 全屏时样式微调 (全屏API下容器样式自动适配，无需额外样式) */
         .file-input-hidden {
             display: none;
         }
@@ -359,7 +360,7 @@
     <div class="header">
         <div class="title">
             🐍 Python 科学计算器
-            <span class="badge">保存/导入 .py + 字体缩放</span>
+            <span class="badge">全屏编辑 + 保存/导入 .py</span>
         </div>
         <div class="status-area">
             <div class="progress-bar-container">
@@ -371,7 +372,7 @@
         </div>
     </div>
     <div class="workspace">
-        <div class="editor-panel">
+        <div class="editor-panel" id="editorPanel">
             <div class="panel-label">
                 📝 代码编辑器 (语法高亮)
                 <span class="cache-note" id="cacheHint">📦 缓存加速</span>
@@ -405,11 +406,12 @@ print("NumPy版本:", np.__version__)'></textarea>
                         <button id="fontResetBtn">⟳ 重置字体</button>
                     </div>
                 </div>
+                <button id="fullscreenBtn" title="全屏编辑代码">🖥️ 全屏</button>
                 <button id="clearOutputBtn">🗑 清空输出</button>
                 <button id="resetEditorBtn">⟳ 重置示例</button>
             </div>
             <div class="tip">
-                💡 支持 NumPy, SciPy, Matplotlib | 可保存/导入 .py 文件 | 字体可缩放
+                💡 支持 NumPy, SciPy, Matplotlib | 可保存/导入 .py | 字体缩放 | 全屏编辑
             </div>
         </div>
         <div class="output-panel">
@@ -450,6 +452,8 @@ print("NumPy版本:", np.__version__)'></textarea>
     const fontIncreaseBtn = document.getElementById('fontIncreaseBtn');
     const fontDecreaseBtn = document.getElementById('fontDecreaseBtn');
     const fontResetBtn = document.getElementById('fontResetBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const editorPanel = document.getElementById('editorPanel');
     
     // 隐藏的文件上传input
     let fileInput = null;
@@ -658,7 +662,6 @@ run_user_code(${JSON.stringify(code)})
                         document.getElementById('codeEditor').value = content;
                         showTextOutput(`📁 已导入文件: ${file.name}`, false);
                     }
-                    // 清空文件选择，允许重复导入同一文件
                     fileInput.value = '';
                 };
                 reader.onerror = () => {
@@ -671,13 +674,12 @@ run_user_code(${JSON.stringify(code)})
         fileInput.click();
     }
 
-    // 字体缩放功能 (基于 CodeMirror 根元素)
-    let currentFontSize = 14; // 默认px
+    // 字体缩放功能
+    let currentFontSize = 14;
     function setEditorFontSize(size) {
         if (!codeMirrorEditor) return;
         const wrapper = codeMirrorEditor.getWrapperElement();
         wrapper.style.fontSize = size + 'px';
-        // 同时调整行高
         wrapper.style.lineHeight = (size * 1.5) + 'px';
         codeMirrorEditor.refresh();
         currentFontSize = size;
@@ -700,7 +702,6 @@ run_user_code(${JSON.stringify(code)})
     function toggleSettingsMenu() {
         settingsDropdown.classList.toggle('show');
     }
-    // 点击其他地方关闭菜单
     document.addEventListener('click', function(e) {
         if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
             settingsDropdown.classList.remove('show');
@@ -710,6 +711,54 @@ run_user_code(${JSON.stringify(code)})
         e.stopPropagation();
         toggleSettingsMenu();
     });
+
+    // 全屏功能 (使用Fullscreen API)
+    function toggleFullscreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            // 进入全屏
+            const elem = editorPanel;
+            const requestMethod = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
+            if (requestMethod) {
+                requestMethod.call(elem).then(() => {
+                    fullscreenBtn.textContent = '🗗 退出全屏';
+                    fullscreenBtn.title = '退出全屏编辑';
+                }).catch(err => {
+                    console.warn(`全屏失败: ${err.message}`);
+                    showTextOutput("⚠️ 全屏请求被拒绝或浏览器不支持", true);
+                });
+            } else {
+                showTextOutput("⚠️ 当前浏览器不支持全屏API", true);
+            }
+        } else {
+            // 退出全屏
+            const exitMethod = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+            if (exitMethod) {
+                exitMethod.call(document).then(() => {
+                    fullscreenBtn.textContent = '🖥️ 全屏';
+                    fullscreenBtn.title = '全屏编辑代码';
+                }).catch(err => {
+                    console.warn(`退出全屏失败: ${err.message}`);
+                });
+            }
+        }
+    }
+
+    // 监听全屏变化事件，同步按钮文字
+    function onFullscreenChange() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            fullscreenBtn.textContent = '🖥️ 全屏';
+            fullscreenBtn.title = '全屏编辑代码';
+        } else {
+            fullscreenBtn.textContent = '🗗 退出全屏';
+            fullscreenBtn.title = '退出全屏编辑';
+        }
+        // 全屏切换后 CodeMirror 布局可能变化，刷新一下
+        if (codeMirrorEditor) {
+            setTimeout(() => codeMirrorEditor.refresh(), 100);
+        }
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
     // 重置编辑器内容
     function resetEditor() {
@@ -746,7 +795,6 @@ run_user_code(${JSON.stringify(code)})
         });
         codeMirrorEditor.setValue(DEFAULT_CODE);
         codeMirrorEditor.setSize(null, 400);
-        // 设置默认字体
         setEditorFontSize(14);
     }
 
@@ -883,6 +931,7 @@ print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {mat
         fontIncreaseBtn.addEventListener('click', increaseFont);
         fontDecreaseBtn.addEventListener('click', decreaseFont);
         fontResetBtn.addEventListener('click', resetFont);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
         initPyodide();
     })();
 </script>
