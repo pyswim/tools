@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>Python科学计算器 | 智能补全 (Ctrl+B) | 全屏编辑</title>
+    <title>Python科学计算器 | 文件读写 | Ctrl+B补全 | 全屏编辑</title>
     <!-- CodeMirror 核心 + 语法高亮 + 补全插件 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
@@ -218,6 +218,29 @@
             transform: translateY(1px);
         }
 
+        .file-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 2rem;
+            border: 1px solid #334155;
+        }
+        .file-bar input, .file-bar select {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 40px;
+            padding: 6px 12px;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+        }
+        .file-bar input::placeholder {
+            color: #64748b;
+        }
+
         .output-area {
             background: #0f172a;
             border-radius: 1rem;
@@ -359,6 +382,9 @@
                 right: 0;
                 min-width: 140px;
             }
+            .file-bar input {
+                font-size: 0.7rem;
+            }
         }
         .file-input-hidden {
             display: none;
@@ -386,7 +412,7 @@
     <div class="header">
         <div class="title">
             🐍 Python 科学计算器
-            <span class="badge">智能补全 (<kbd>Ctrl+B</kbd>)</span>
+            <span class="badge">文件读写 + <kbd>Ctrl+B</kbd>补全</span>
         </div>
         <div class="status-area">
             <div class="progress-bar-container">
@@ -424,7 +450,7 @@ print("NumPy版本:", np.__version__)'></textarea>
                 <button id="redoBtn" title="重做 (Ctrl+Y)">↪️ 重做</button>
                 <button id="saveBtn" title="保存代码到 .py 文件">💾 保存代码</button>
                 <button id="importBtn" title="导入 .py 文件">📂 导入.py</button>
-                <button id="completionBtn" title="手动触发补全 (Ctrl+Space)">📋 补全</button>
+                <button id="completionBtn" title="手动触发补全 (Ctrl+B)">📋 补全</button>
                 <div class="settings-menu">
                     <button id="settingsBtn" title="设置菜单">⚙️ 设置</button>
                     <div id="settingsDropdown" class="settings-dropdown">
@@ -437,9 +463,18 @@ print("NumPy版本:", np.__version__)'></textarea>
                 <button id="clearOutputBtn">🗑 清空输出</button>
                 <button id="resetEditorBtn">⟳ 重置示例</button>
             </div>
+            <!-- 文件操作栏 -->
+            <div class="file-bar">
+                <input type="file" id="uploadFileInput" accept=".txt,.csv,.json,.py,.dat">
+                <button id="uploadFileBtn">📤 上传文件</button>
+                <input type="text" id="downloadFilename" placeholder="输出文件名 (如 output.txt)" value="output.txt">
+                <button id="downloadFileBtn">💾 下载输出文件</button>
+                <button id="listFilesBtn">📋 列出文件</button>
+            </div>
             <div class="tip">
-                💡 提示: 按 <kbd>Ctrl+Space</kbd> (Windows/Linux) 或 <kbd>Cmd+Space</kbd> (Mac) 触发代码补全。<br>
-                支持 Python 关键字、内置函数、NumPy/SciPy/Matplotlib 常用符号。如果快捷键被系统占用，请使用「补全」按钮。
+                💡 提示: 按 <kbd>Ctrl+B</kbd> (Windows/Linux) 或 <kbd>Cmd+B</kbd> (Mac) 触发代码补全。<br>
+                📂 上传文件后，Python 中可通过 <code>open("/home/pyodide/文件名")</code> 读取。<br>
+                📝 Python 写入文件（如 <code>open("result.txt","w")</code>）后，点击「下载输出文件」即可保存。
             </div>
         </div>
         <div class="output-panel">
@@ -483,12 +518,35 @@ print("NumPy版本:", np.__version__)'></textarea>
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     const editorPanel = document.getElementById('editorPanel');
     const completionBtn = document.getElementById('completionBtn');
+    const uploadFileInput = document.getElementById('uploadFileInput');
+    const uploadFileBtn = document.getElementById('uploadFileBtn');
+    const downloadFilenameInput = document.getElementById('downloadFilename');
+    const downloadFileBtn = document.getElementById('downloadFileBtn');
+    const listFilesBtn = document.getElementById('listFilesBtn');
     
-    let fileInput = null;
+    let fileInputForImport = null;
 
-    // 示例代码
+    // 示例代码 (包含文件读写示例)
     const DEFAULT_CODE = `import numpy as np
 import matplotlib.pyplot as plt
+from scipy import stats, integrate
+
+# 演示文件读写：尝试读取上传的文件 (如果存在)
+try:
+    with open("/home/pyodide/user_data.txt", "r") as f:
+        content = f.read()
+        print(f"读取到上传文件内容: {content[:200]}")
+except FileNotFoundError:
+    print("未找到上传文件，可先使用「上传文件」功能上传 user_data.txt")
+
+# 生成一个示例输出文件
+with open("output.txt", "w") as f:
+    f.write("这是程序生成的输出文件\\n")
+    f.write(f"当前时间: {__import__('time').time()}\\n")
+    f.write("NumPy 版本: " + np.__version__ + "\\n")
+print("已生成输出文件 output.txt，可使用「下载输出文件」按钮保存")
+
+# 科学计算演示
 from mpl_toolkits.mplot3d import Axes3D
 
 # 1. 创建网格数据
@@ -505,7 +563,9 @@ surf = ax.plot_surface(X, Y, Z, cmap='viridis', edgecolor='none')
 # 3. 添加颜色条和标签
 fig.colorbar(surf)
 ax.set_xlabel('X'), ax.set_ylabel('Y'), ax.set_zlabel('Z')
-plt.show()`;
+plt.show()
+
+print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
 
     // 进度条与状态
     function setProgress(percent, message) {
@@ -637,13 +697,13 @@ plt.show()`;
     }
 
     function importPyFile() {
-        if (!fileInput) {
-            fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = '.py,.txt,.pyw,text/x-python';
-            fileInput.style.display = 'none';
-            document.body.appendChild(fileInput);
-            fileInput.addEventListener('change', (e) => {
+        if (!fileInputForImport) {
+            fileInputForImport = document.createElement('input');
+            fileInputForImport.type = 'file';
+            fileInputForImport.accept = '.py,.txt,.pyw,text/x-python';
+            fileInputForImport.style.display = 'none';
+            document.body.appendChild(fileInputForImport);
+            fileInputForImport.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
@@ -656,13 +716,13 @@ plt.show()`;
                         document.getElementById('codeEditor').value = content;
                         showTextOutput(`📁 已导入文件: ${file.name}`, false);
                     }
-                    fileInput.value = '';
+                    fileInputForImport.value = '';
                 };
-                reader.onerror = () => { showTextOutput("❌ 读取文件失败", true); fileInput.value = ''; };
+                reader.onerror = () => { showTextOutput("❌ 读取文件失败", true); fileInputForImport.value = ''; };
                 reader.readAsText(file, 'UTF-8');
             });
         }
-        fileInput.click();
+        fileInputForImport.click();
     }
 
     // 字体缩放
@@ -728,33 +788,109 @@ plt.show()`;
         imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">图表将显示在此处</div>';
     }
 
-    // ---------- 智能补全核心 (修复 Ctrl+Space 快捷键) ----------
-    // 丰富的补全词库 (Python 关键字 + 内置 + numpy/scipy/matplotlib 常用符号)
+    // ---------- 文件操作 (Pyodide 虚拟文件系统) ----------
+    async function uploadFileToFS() {
+        if (!pyodideReady || !pyodide) {
+            showTextOutput("请等待 Pyodide 初始化完成后再上传文件", true);
+            return;
+        }
+        const file = uploadFileInput.files[0];
+        if (!file) {
+            showTextOutput("请先选择要上传的文件", true);
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content = e.target.result;
+            // 保存到虚拟文件系统 /home/pyodide/ 下，保留原文件名
+            const filename = file.name;
+            const fsPath = `/home/pyodide/${filename}`;
+            try {
+                pyodide.FS.writeFile(fsPath, content);
+                showTextOutput(`✅ 文件已上传到虚拟文件系统: ${fsPath}\n可在 Python 中用 open("${fsPath}") 读取`, false);
+                // 可选：同时写入一个固定名称方便示例
+                if (filename === "user_data.txt") {
+                    // 已经写入
+                } else {
+                    // 提示
+                }
+            } catch (err) {
+                showTextOutput(`❌ 写入虚拟文件系统失败: ${err}`, true);
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
+    }
+
+    async function downloadOutputFile() {
+        if (!pyodideReady || !pyodide) {
+            showTextOutput("Pyodide 未就绪", true);
+            return;
+        }
+        let filename = downloadFilenameInput.value.trim();
+        if (!filename) {
+            showTextOutput("请输入要下载的文件名", true);
+            return;
+        }
+        // 确保路径在 /home/pyodide/ 下，如果用户只输入文件名，自动补全路径
+        let fullPath = filename;
+        if (!fullPath.startsWith('/')) {
+            fullPath = `/home/pyodide/${filename}`;
+        }
+        try {
+            const content = pyodide.FS.readFile(fullPath, { encoding: 'utf8' });
+            const blob = new Blob([content], {type: 'text/plain'});
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = filename.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showTextOutput(`✅ 已下载文件: ${filename}`, false);
+        } catch (err) {
+            showTextOutput(`❌ 文件不存在或读取失败: ${err.message}`, true);
+        }
+    }
+
+    async function listFiles() {
+        if (!pyodideReady || !pyodide) {
+            showTextOutput("Pyodide 未就绪", true);
+            return;
+        }
+        try {
+            const files = pyodide.FS.readdir('/home/pyodide/');
+            const fileList = files.filter(f => f !== '.' && f !== '..');
+            if (fileList.length === 0) {
+                showTextOutput("📁 虚拟文件系统中暂无用户文件（除了系统目录）", false);
+            } else {
+                showTextOutput(`📁 虚拟文件系统中的文件列表:\n${fileList.join('\n')}`, false);
+            }
+        } catch (err) {
+            showTextOutput(`列出文件失败: ${err}`, true);
+        }
+    }
+
+    // ---------- 智能补全核心 (快捷键改为 Ctrl+B) ----------
     const completionWords = [
-        // Python 关键字
         "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
         "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
         "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
         "return", "try", "while", "with", "yield",
-        // 内置函数
         "abs", "all", "any", "bin", "bool", "chr", "dict", "enumerate", "float", "format",
         "int", "isinstance", "issubclass", "len", "list", "max", "min", "oct", "ord", "pow",
         "print", "range", "repr", "round", "set", "sorted", "str", "sum", "tuple", "type", "zip",
-        // numpy 常用
         "np", "np.array", "np.zeros", "np.ones", "np.empty", "np.linspace", "np.arange",
         "np.random", "np.random.randn", "np.random.randint", "np.sin", "np.cos", "np.tan",
         "np.exp", "np.log", "np.sqrt", "np.mean", "np.std", "np.var", "np.sum", "np.dot",
         "np.linalg", "np.linalg.inv", "np.reshape", "np.transpose", "np.concatenate",
-        // matplotlib 常用
         "plt", "plt.plot", "plt.scatter", "plt.hist", "plt.bar", "plt.imshow", "plt.subplot",
         "plt.subplots", "plt.figure", "plt.xlabel", "plt.ylabel", "plt.title", "plt.legend",
         "plt.grid", "plt.show", "plt.savefig", "plt.close", "plt.clf",
-        // scipy 常用
         "scipy", "sp", "scipy.stats", "scipy.integrate", "scipy.special", "scipy.optimize",
         "stats.norm", "stats.uniform", "integrate.quad", "special.gamma", "optimize.minimize"
     ];
 
-    // 自定义补全函数
     function pythonHint(cm, options) {
         const cursor = cm.getCursor();
         const token = cm.getTokenAt(cursor);
@@ -773,14 +909,12 @@ plt.show()`;
         };
     }
 
-    // 手动触发补全 (供按钮调用)
     function showCompletion() {
         if (codeMirrorEditor) {
             CodeMirror.commands.autocomplete(codeMirrorEditor);
         }
     }
 
-    // 初始化 CodeMirror 并绑定补全，修复 Ctrl+Space 快捷键
     function initCodeMirror() {
         const textarea = document.getElementById('codeEditor');
         codeMirrorEditor = CodeMirror.fromTextArea(textarea, {
@@ -799,7 +933,7 @@ plt.show()`;
                 "Ctrl-Y": function(cm) { cm.redo(); },
                 "Cmd-Y": function(cm) { cm.redo(); },
                 "Ctrl-Shift-Z": function(cm) { cm.redo(); },
-                // 显式绑定 Ctrl+Space / Cmd+Space 到 autocomplete 命令
+                // 将补全快捷键改为 Ctrl+B / Cmd+B
                 "Ctrl-B": function(cm) { CodeMirror.commands.autocomplete(cm); },
                 "Cmd-B": function(cm) { CodeMirror.commands.autocomplete(cm); }
             },
@@ -813,22 +947,15 @@ plt.show()`;
         codeMirrorEditor.setSize(null, 400);
         setEditorFontSize(14);
         
-        // 额外增强：直接在编辑器 DOM 上监听 keydown 事件，防止浏览器默认行为（如输入法切换）
-        // 这可以确保即使 extraKeys 因为某些原因失效，也能触发补全
+        // 额外监听 keydown 确保 Ctrl+B 生效（防止浏览器默认行为）
         const cmWrapper = codeMirrorEditor.getWrapperElement();
         cmWrapper.addEventListener('keydown', (e) => {
-            // 检查 Ctrl+Space 或 Cmd+Space
-            if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyB') {
                 e.preventDefault();
                 e.stopPropagation();
                 CodeMirror.commands.autocomplete(codeMirrorEditor);
             }
         });
-        
-        // 确保 autocomplete 命令存在
-        if (!CodeMirror.commands.autocomplete) {
-            console.warn("autocomplete command missing, but show-hint should register it.");
-        }
     }
 
     // ---------- Pyodide 初始化 ----------
@@ -854,6 +981,11 @@ plt.show()`;
             setProgress(70, "✅ scipy 完成, 加载 matplotlib ...");
             await pyodide.loadPackage("matplotlib", { messageCallback });
             setProgress(85, "✅ 科学包就绪, 配置环境...");
+            
+            // 确保虚拟文件系统有 /home/pyodide 目录
+            try {
+                pyodide.FS.mkdir('/home/pyodide');
+            } catch(e) { /* 目录已存在 */ }
             
             const initPythonCode = `
 import sys, io, traceback, base64
@@ -960,6 +1092,9 @@ print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {mat
         fontResetBtn.addEventListener('click', resetFont);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         completionBtn.addEventListener('click', showCompletion);
+        uploadFileBtn.addEventListener('click', uploadFileToFS);
+        downloadFileBtn.addEventListener('click', downloadOutputFile);
+        listFilesBtn.addEventListener('click', listFiles);
         initPyodide();
     })();
 </script>
