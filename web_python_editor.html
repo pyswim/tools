@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>Python科学计算器 | 文件读写 | Ctrl+B补全 | 全屏编辑</title>
+    <title>Python科学计算器 | 中文字体支持 | Ctrl+B补全 | 文件读写</title>
     <!-- CodeMirror 核心 + 语法高亮 + 补全插件 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
@@ -12,398 +12,73 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/python/python.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/hint/show-hint.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', 'Roboto', 'Fira Code', monospace, sans-serif;
             background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-            margin: 0;
-            padding: 16px;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            margin: 0; padding: 16px; min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
         }
-
         .container {
-            max-width: 1500px;
-            width: 100%;
-            background: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(2px);
-            border-radius: 2rem;
-            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 1500px; width: 100%;
+            background: rgba(30,41,59,0.6); backdrop-filter: blur(2px);
+            border-radius: 2rem; box-shadow: 0 25px 45px -12px rgba(0,0,0,0.5);
+            overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
         }
-
         .header {
-            background: #0f172a;
-            padding: 1rem 1.5rem;
+            background: #0f172a; padding: 1rem 1.5rem;
             border-bottom: 1px solid #334155;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
         }
-
-        .title {
-            color: #f1f5f9;
-            font-weight: 700;
-            font-size: 1.2rem;
-            letter-spacing: -0.3px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .title .badge {
-            background: #3b82f6;
-            font-size: 0.7rem;
-            padding: 4px 10px;
-            border-radius: 40px;
-            font-weight: normal;
-            background: #2563eb;
-        }
-
-        .status-area {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .status {
-            font-size: 0.75rem;
-            background: #1e293b;
-            padding: 5px 12px;
-            border-radius: 40px;
-            color: #94a3b8;
-            font-family: monospace;
-        }
-
-        .status.ready {
-            color: #4ade80;
-            background: #16653430;
-            border-left: 3px solid #4ade80;
-        }
-
-        .progress-bar-container {
-            width: 140px;
-            background-color: #334155;
-            border-radius: 40px;
-            overflow: hidden;
-            height: 6px;
-        }
-
-        .progress-bar {
-            width: 0%;
-            height: 6px;
-            background-color: #3b82f6;
-            transition: width 0.2s ease;
-        }
-
-        .workspace {
-            display: flex;
-            flex-wrap: wrap;
-        }
-
-        .editor-panel {
-            flex: 1.2;
-            min-width: 280px;
-            background: #0f172a;
-            padding: 18px;
-            border-right: 1px solid #334155;
-            transition: all 0.2s;
-        }
-
-        .output-panel {
-            flex: 1;
-            min-width: 260px;
-            background: #020617;
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .panel-label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-            color: #94a3b8;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .CodeMirror {
-            height: 400px;
-            border-radius: 1rem;
-            font-size: 14px;
-            font-family: 'Fira Code', 'Cascadia Code', monospace;
-            border: 1px solid #334155;
-            background: #1e293b;
-        }
-        .CodeMirror-gutters {
-            background: #0f172a;
-            border-right: 1px solid #334155;
-        }
-        .CodeMirror-linenumber {
-            color: #64748b;
-        }
-        /* 补全弹窗深色主题 */
-        .CodeMirror-hints {
-            background: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 12px;
-            color: #e2e8f0;
-            font-family: 'Fira Code', monospace;
-            font-size: 13px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-            z-index: 300;
-        }
-        .CodeMirror-hint {
-            color: #cbd5e1;
-            padding: 6px 10px;
-        }
-        .CodeMirror-hint-active {
-            background: #2563eb;
-            color: white;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 16px;
-            flex-wrap: wrap;
-            justify-content: flex-start;
-        }
-
+        .title { color: #f1f5f9; font-weight: 700; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .title .badge { background: #3b82f6; font-size: 0.7rem; padding: 4px 10px; border-radius: 40px; background: #2563eb; }
+        .status-area { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .status { font-size: 0.75rem; background: #1e293b; padding: 5px 12px; border-radius: 40px; color: #94a3b8; font-family: monospace; }
+        .status.ready { color: #4ade80; background: #16653430; border-left: 3px solid #4ade80; }
+        .progress-bar-container { width: 140px; background-color: #334155; border-radius: 40px; overflow: hidden; height: 6px; }
+        .progress-bar { width: 0%; height: 6px; background-color: #3b82f6; transition: width 0.2s ease; }
+        .workspace { display: flex; flex-wrap: wrap; }
+        .editor-panel { flex: 1.2; min-width: 280px; background: #0f172a; padding: 18px; border-right: 1px solid #334155; transition: all 0.2s; }
+        .output-panel { flex: 1; min-width: 260px; background: #020617; padding: 18px; display: flex; flex-direction: column; gap: 18px; }
+        .panel-label { font-size: 0.8rem; text-transform: uppercase; font-weight: 600; color: #94a3b8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .CodeMirror { height: 400px; border-radius: 1rem; font-size: 14px; font-family: 'Fira Code', monospace; border: 1px solid #334155; background: #1e293b; }
+        .CodeMirror-gutters { background: #0f172a; border-right: 1px solid #334155; }
+        .CodeMirror-linenumber { color: #64748b; }
+        .CodeMirror-hints { background: #1e293b; border: 1px solid #475569; border-radius: 12px; color: #e2e8f0; font-family: monospace; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); z-index: 300; }
+        .CodeMirror-hint { color: #cbd5e1; padding: 6px 10px; }
+        .CodeMirror-hint-active { background: #2563eb; color: white; }
+        .button-group { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
         button {
-            background: #1e293b;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #e2e8f0;
-            border: 1px solid #475569;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            touch-action: manipulation;
+            background: #1e293b; border: none; padding: 8px 14px; border-radius: 40px;
+            font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: 0.2s;
+            color: #e2e8f0; border: 1px solid #475569; display: inline-flex; align-items: center; gap: 6px;
         }
-
-        button.primary {
-            background: #2563eb;
-            border-color: #3b82f6;
-            color: white;
-            box-shadow: 0 2px 6px #2563eb40;
-        }
-
-        button.primary:hover {
-            background: #1d4ed8;
-            transform: translateY(-1px);
-        }
-
-        button:active {
-            transform: translateY(1px);
-        }
-
-        .file-bar {
-            display: flex;
-            gap: 10px;
-            margin-top: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-            background: #0f172a;
-            padding: 10px;
-            border-radius: 2rem;
-            border: 1px solid #334155;
-        }
-        .file-bar input, .file-bar select {
-            background: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 40px;
-            padding: 6px 12px;
-            color: #e2e8f0;
-            font-size: 0.8rem;
-        }
-        .file-bar input::placeholder {
-            color: #64748b;
-        }
-
-        .output-area {
-            background: #0f172a;
-            border-radius: 1rem;
-            padding: 14px;
-            min-height: 220px;
-            max-height: 350px;
-            overflow-y: auto;
-            font-family: 'Fira Code', monospace;
-            font-size: 12px;
-            border: 1px solid #334155;
-        }
-
-        .output-text {
-            white-space: pre-wrap;
-            word-break: break-word;
-            color: #cbd5e1;
-        }
-
-        .error-text {
-            color: #f87171;
-            background: #7f1a1a30;
-            padding: 6px;
-            border-radius: 12px;
-        }
-
-        .image-gallery {
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            margin-top: 6px;
-        }
-
-        .plot-card {
-            background: #0f172a;
-            border-radius: 1rem;
-            padding: 10px;
-            border: 1px solid #334155;
-            text-align: center;
-        }
-
-        .plot-card img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 12px;
-            background: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            cursor: pointer;
-        }
-
-        .save-btn {
-            margin-top: 8px;
-            background: #1e293b;
-            border: 1px solid #3b82f6;
-            color: #90cdf4;
-            padding: 5px 12px;
-            font-size: 0.7rem;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .save-btn:hover {
-            background: #2563eb;
-            color: white;
-        }
-
-        .loader {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #94a3b8;
-            border-radius: 50%;
-            border-top-color: #3b82f6;
-            animation: spin 0.8s linear infinite;
-            margin-right: 6px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .tip {
-            font-size: 0.7rem;
-            color: #64748b;
-            margin-top: 12px;
-            text-align: center;
-        }
-
-        .settings-menu {
-            position: relative;
-            display: inline-block;
-        }
-        .settings-dropdown {
-            display: none;
-            position: absolute;
-            bottom: 50px;
-            right: 0;
-            background: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 1rem;
-            padding: 10px;
-            min-width: 160px;
-            z-index: 200;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-        }
-        .settings-dropdown.show {
-            display: block;
-        }
-        .settings-dropdown button {
-            width: 100%;
-            margin: 5px 0;
-            background: #0f172a;
-            justify-content: center;
-        }
-        .settings-dropdown button:hover {
-            background: #2563eb;
-        }
+        button.primary { background: #2563eb; border-color: #3b82f6; color: white; box-shadow: 0 2px 6px #2563eb40; }
+        button.primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+        button:active { transform: translateY(1px); }
+        .file-bar { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; background: #0f172a; padding: 10px; border-radius: 2rem; border: 1px solid #334155; }
+        .file-bar input, .file-bar select { background: #1e293b; border: 1px solid #475569; border-radius: 40px; padding: 6px 12px; color: #e2e8f0; font-size: 0.8rem; }
+        .output-area { background: #0f172a; border-radius: 1rem; padding: 14px; min-height: 220px; max-height: 350px; overflow-y: auto; font-family: monospace; font-size: 12px; border: 1px solid #334155; }
+        .output-text { white-space: pre-wrap; word-break: break-word; color: #cbd5e1; }
+        .error-text { color: #f87171; background: #7f1a1a30; padding: 6px; border-radius: 12px; }
+        .image-gallery { display: flex; flex-direction: column; gap: 18px; margin-top: 6px; }
+        .plot-card { background: #0f172a; border-radius: 1rem; padding: 10px; border: 1px solid #334155; text-align: center; }
+        .plot-card img { max-width: 100%; height: auto; border-radius: 12px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; }
+        .save-btn { margin-top: 8px; background: #1e293b; border: 1px solid #3b82f6; color: #90cdf4; padding: 5px 12px; font-size: 0.7rem; border-radius: 30px; cursor: pointer; }
+        .loader { display: inline-block; width: 16px; height: 16px; border: 2px solid #94a3b8; border-radius: 50%; border-top-color: #3b82f6; animation: spin 0.8s linear infinite; margin-right: 6px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .tip { font-size: 0.7rem; color: #64748b; margin-top: 12px; text-align: center; }
+        .settings-menu { position: relative; display: inline-block; }
+        .settings-dropdown { display: none; position: absolute; bottom: 50px; right: 0; background: #1e293b; border: 1px solid #475569; border-radius: 1rem; padding: 10px; min-width: 160px; z-index: 200; backdrop-filter: blur(8px); box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
+        .settings-dropdown.show { display: block; }
+        .settings-dropdown button { width: 100%; margin: 5px 0; background: #0f172a; justify-content: center; }
         @media (max-width: 680px) {
-            body {
-                padding: 10px;
-            }
-            .header {
-                padding: 0.8rem 1rem;
-            }
-            .title {
-                font-size: 1rem;
-            }
-            button {
-                padding: 6px 12px;
-                font-size: 0.75rem;
-            }
-            .CodeMirror {
-                height: 320px;
-            }
-            .settings-dropdown {
-                bottom: 45px;
-                right: 0;
-                min-width: 140px;
-            }
-            .file-bar input {
-                font-size: 0.7rem;
-            }
+            body { padding: 10px; }
+            .CodeMirror { height: 320px; }
+            button { padding: 6px 12px; font-size: 0.75rem; }
         }
-        .file-input-hidden {
-            display: none;
-        }
-        .cache-note {
-            font-size: 0.65rem;
-            color: #5ee0a4;
-            background: #0f172a;
-            padding: 3px 8px;
-            border-radius: 30px;
-        }
-        kbd {
-            background: #1e293b;
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-family: monospace;
-            font-size: 0.75rem;
-            border: 1px solid #475569;
-        }
+        .cache-note { font-size: 0.65rem; color: #5ee0a4; background: #0f172a; padding: 3px 8px; border-radius: 30px; }
+        kbd { background: #1e293b; border-radius: 4px; padding: 2px 6px; font-family: monospace; font-size: 0.75rem; border: 1px solid #475569; }
     </style>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 </head>
@@ -412,84 +87,55 @@
     <div class="header">
         <div class="title">
             🐍 Python 科学计算器
-            <span class="badge">文件读写 + <kbd>Ctrl+B</kbd>补全</span>
+            <span class="badge">中文字体 ✓</span>
         </div>
         <div class="status-area">
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="loadProgress"></div>
-            </div>
-            <div class="status" id="statusLabel">
-                ⚙️ 初始化...
-            </div>
+            <div class="progress-bar-container"><div class="progress-bar" id="loadProgress"></div></div>
+            <div class="status" id="statusLabel">⚙️ 初始化...</div>
         </div>
     </div>
     <div class="workspace">
         <div class="editor-panel" id="editorPanel">
             <div class="panel-label">
-                📝 代码编辑器 (语法高亮 + 智能补全)
+                📝 代码编辑器 (Ctrl+B 补全)
                 <span class="cache-note" id="cacheHint">📦 缓存加速</span>
             </div>
-            <textarea id="codeEditor" placeholder='import numpy as np
-import matplotlib.pyplot as plt
-
-x = np.linspace(0, 10, 100)
-y = np.sin(x) * np.exp(-x/5)
-
-plt.figure(figsize=(8, 4))
-plt.plot(x, y, "r-", linewidth=2)
-plt.xlabel("x")
-plt.ylabel("y")
-plt.title("衰减振荡")
-plt.grid(True)
-plt.show()
-
-print("NumPy版本:", np.__version__)'></textarea>
+            <textarea id="codeEditor"></textarea>
             <div class="button-group">
                 <button class="primary" id="runBtn">▶ 运行代码</button>
-                <button id="undoBtn" title="撤销 (Ctrl+Z)">↩️ 撤销</button>
-                <button id="redoBtn" title="重做 (Ctrl+Y)">↪️ 重做</button>
-                <button id="saveBtn" title="保存代码到 .py 文件">💾 保存代码</button>
-                <button id="importBtn" title="导入 .py 文件">📂 导入.py</button>
-                <button id="completionBtn" title="手动触发补全 (Ctrl+B)">📋 补全</button>
+                <button id="undoBtn">↩️ 撤销</button><button id="redoBtn">↪️ 重做</button>
+                <button id="saveBtn">💾 保存代码</button><button id="importBtn">📂 导入.py</button>
+                <button id="completionBtn">📋 补全</button>
                 <div class="settings-menu">
-                    <button id="settingsBtn" title="设置菜单">⚙️ 设置</button>
+                    <button id="settingsBtn">⚙️ 设置</button>
                     <div id="settingsDropdown" class="settings-dropdown">
                         <button id="fontIncreaseBtn">🔍 放大字体 +</button>
                         <button id="fontDecreaseBtn">🔍 缩小字体 -</button>
                         <button id="fontResetBtn">⟳ 重置字体</button>
                     </div>
                 </div>
-                <button id="fullscreenBtn" title="全屏编辑代码">🖥️ 全屏</button>
+                <button id="fullscreenBtn">🖥️ 全屏</button>
                 <button id="clearOutputBtn">🗑 清空输出</button>
                 <button id="resetEditorBtn">⟳ 重置示例</button>
             </div>
-            <!-- 文件操作栏 -->
             <div class="file-bar">
                 <input type="file" id="uploadFileInput" accept=".txt,.csv,.json,.py,.dat">
                 <button id="uploadFileBtn">📤 上传文件</button>
-                <input type="text" id="downloadFilename" placeholder="输出文件名 (如 output.txt)" value="output.txt">
+                <input type="text" id="downloadFilename" placeholder="输出文件名" value="output.txt">
                 <button id="downloadFileBtn">💾 下载输出文件</button>
                 <button id="listFilesBtn">📋 列出文件</button>
             </div>
             <div class="tip">
-                💡 提示: 按 <kbd>Ctrl+B</kbd> (Windows/Linux) 或 <kbd>Cmd+B</kbd> (Mac) 触发代码补全。<br>
-                📂 上传文件后，Python 中可通过 <code>open("/home/pyodide/文件名")</code> 读取。<br>
-                📝 Python 写入文件（如 <code>open("result.txt","w")</code>）后，点击「下载输出文件」即可保存。
+                💡 提示: <kbd>Ctrl+B</kbd> 触发补全。自动下载中文字体(约5MB,仅首次)使 matplotlib 支持中文。<br>
+                📂 上传文件后，Python 中用 <code>open("/home/pyodide/文件名")</code> 读取。<br>
+                📝 写入文件后点击「下载输出文件」保存。
             </div>
         </div>
         <div class="output-panel">
-            <div class="panel-label">
-                📟 控制台输出
-            </div>
-            <div class="output-area" id="textOutput">
-                <div class="output-text">✨ 等待代码执行...</div>
-            </div>
-            <div class="panel-label">
-                🖼️ Matplotlib 图表
-            </div>
-            <div class="output-area" id="imageOutput" style="min-height: 180px;">
-                <div class="output-text" style="color:#64748b;">运行后 plt.show() 显示图表</div>
-            </div>
+            <div class="panel-label">📟 控制台输出</div>
+            <div class="output-area" id="textOutput"><div class="output-text">✨ 等待代码执行...</div></div>
+            <div class="panel-label">🖼️ Matplotlib 图表</div>
+            <div class="output-area" id="imageOutput"><div class="output-text" style="color:#64748b;">运行后 plt.show() 显示图表</div></div>
         </div>
     </div>
 </div>
@@ -523,31 +169,46 @@ print("NumPy版本:", np.__version__)'></textarea>
     const downloadFilenameInput = document.getElementById('downloadFilename');
     const downloadFileBtn = document.getElementById('downloadFileBtn');
     const listFilesBtn = document.getElementById('listFilesBtn');
-    
     let fileInputForImport = null;
 
-    // 示例代码 (包含文件读写示例)
+    // 示例代码 (含中文标题演示)
     const DEFAULT_CODE = `import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats, integrate
+from mpl_toolkits.mplot3d import Axes3D
 
-# 演示文件读写：尝试读取上传的文件 (如果存在)
+# 演示中文字体支持
+
+# 生成示例数据
+x = np.linspace(0, 10, 100)
+y = np.sin(x) * np.exp(-x/5)
+
+plt.figure(figsize=(8, 4))
+plt.plot(x, y, 'r-', linewidth=2, label='衰减振荡')
+plt.xlabel('时间 (秒)')
+plt.ylabel('振幅')
+plt.title('中文标题示例: 正弦衰减曲线')
+plt.grid(True, alpha=0.3)
+plt.legend()
+plt.show()
+
+# 文件读写演示
 try:
     with open("/home/pyodide/user_data.txt", "r") as f:
-        content = f.read()
-        print(f"读取到上传文件内容: {content[:200]}")
-except FileNotFoundError:
-    print("未找到上传文件，可先使用「上传文件」功能上传 user_data.txt")
+        print("读取到上传文件内容:", f.read()[:200])
+except:
+    print("未找到上传文件，可先使用「上传文件」按钮上传")
 
-# 生成一个示例输出文件
-with open("output.txt", "w") as f:
-    f.write("这是程序生成的输出文件\\n")
-    f.write(f"当前时间: {__import__('time').time()}\\n")
-    f.write("NumPy 版本: " + np.__version__ + "\\n")
-print("已生成输出文件 output.txt，可使用「下载输出文件」按钮保存")
+# 生成输出文件
+with open("output.txt", "w", encoding='utf-8') as f:
+    f.write("这是程序生成的输出文件，包含中文内容。\\n")
+    f.write(f"NumPy 版本: {np.__version__}\\n")
+print("✅ 已生成 output.txt，可点击「下载输出文件」保存")
+import matplotlib.pyplot as plt
+from scipy import stats, integrate
 
 # 科学计算演示
-from mpl_toolkits.mplot3d import Axes3D
+
 
 # 1. 创建网格数据
 x = np.linspace(-5, 5, 100)
@@ -578,12 +239,10 @@ print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
         if (isReady) statusDiv.classList.add('ready');
         else statusDiv.classList.remove('ready');
     }
-
     function clearOutput() {
         textOutputDiv.innerHTML = '<div class="output-text">✨ 输出已清空，重新运行将显示新内容。</div>';
         imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">暂无图像，运行代码后 plt.show() 将显示图表</div>';
     }
-
     function showTextOutput(content, isError = false) {
         const wrapper = document.createElement('div');
         wrapper.className = isError ? 'error-text' : 'output-text';
@@ -593,10 +252,9 @@ print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
         textOutputDiv.appendChild(wrapper);
         textOutputDiv.scrollTop = textOutputDiv.scrollHeight;
     }
-
     function showImages(imagesBase64List) {
         if (!imagesBase64List || imagesBase64List.length === 0) {
-            imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">📊 本次运行未生成图表 (无 plt.show() 或没有图形)</div>';
+            imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">📊 本次运行未生成图表</div>';
             return;
         }
         const gallery = document.createElement('div');
@@ -607,80 +265,56 @@ print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
             const img = document.createElement('img');
             const imgSrc = 'data:image/png;base64,' + imagesBase64List[i];
             img.src = imgSrc;
-            img.alt = `Matplotlib Figure ${i+1}`;
-            img.title = "点击按钮保存图片";
             const saveBtn = document.createElement('button');
             saveBtn.textContent = '💾 保存为 PNG';
             saveBtn.className = 'save-btn';
-            saveBtn.onclick = (function(src, idx) {
-                return function() { downloadImage(src, `plot_${Date.now()}_${idx+1}.png`); };
-            })(imgSrc, i);
+            saveBtn.onclick = (function(src) { return function() { downloadImage(src, `plot_${Date.now()}.png`); }; })(imgSrc);
             const caption = document.createElement('div');
-            caption.style.fontSize = '11px';
-            caption.style.marginTop = '6px';
-            caption.style.color = '#94a3b8';
+            caption.style.fontSize = '11px'; caption.style.marginTop = '6px'; caption.style.color = '#94a3b8';
             caption.innerText = `图表 ${i+1}`;
-            card.appendChild(img);
-            card.appendChild(saveBtn);
-            card.appendChild(caption);
+            card.appendChild(img); card.appendChild(saveBtn); card.appendChild(caption);
             gallery.appendChild(card);
         }
-        imageOutputDiv.innerHTML = '';
-        imageOutputDiv.appendChild(gallery);
+        imageOutputDiv.innerHTML = ''; imageOutputDiv.appendChild(gallery);
     }
-    
     function downloadImage(dataUrl, filename) {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const link = document.createElement('a'); link.href = dataUrl; link.download = filename;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
-    // 运行 Python 代码
     async function runPythonCode() {
         if (!pyodideReady || !pyodide) {
-            showTextOutput("⏳ Pyodide 未就绪，请稍候... (首次加载约80MB，缓存后秒开)", true);
+            showTextOutput("⏳ Pyodide 未就绪，请稍候...", true);
             return;
         }
         const code = codeMirrorEditor ? codeMirrorEditor.getValue() : document.getElementById('codeEditor').value;
-        if (!code.trim()) {
-            showTextOutput("⚠️ 请输入 Python 代码", true);
-            return;
-        }
+        if (!code.trim()) { showTextOutput("⚠️ 请输入 Python 代码", true); return; }
         runBtn.disabled = true;
         const originalText = runBtn.innerHTML;
         runBtn.innerHTML = '<span class="loader"></span> 执行中 ...';
-        textOutputDiv.innerHTML = '<div class="output-text">🚀 正在执行代码，请稍候...</div>';
+        textOutputDiv.innerHTML = '<div class="output-text">🚀 正在执行代码...</div>';
         imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">⏳ 渲染图形中...</div>';
-        
         try {
             const result = pyodide.runPython(`run_user_code(${JSON.stringify(code)})`);
             const resultObj = result.toJs();
             const outputText = resultObj.get('output') || '';
             const imagesList = resultObj.get('images') || [];
-            if (outputText.trim().length > 0) showTextOutput(outputText, false);
+            if (outputText.trim()) showTextOutput(outputText, false);
             else if (imagesList.length === 0) showTextOutput("✔️ 代码执行完成，没有控制台输出。", false);
             else showTextOutput("✔️ 代码执行完成，已生成图表。", false);
-            if (imagesList.length > 0) showImages(imagesList);
-            else if (imageOutputDiv.innerHTML.includes('⏳')) imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">本次运行未检测到 Matplotlib 图形</div>';
+            if (imagesList.length) showImages(imagesList);
+            else if (imageOutputDiv.innerHTML.includes('⏳')) imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">本次运行未检测到图形</div>';
             result.destroy();
         } catch (err) {
-            console.error(err);
-            let errorMsg = err.toString();
-            if (err.message) errorMsg = err.message;
-            showTextOutput(`🐞 执行错误:\n${errorMsg}`, true);
-            imageOutputDiv.innerHTML = '<div class="output-text" style="color:#f87171;">图形生成失败 (代码错误)</div>';
+            showTextOutput(`🐞 执行错误:\n${err}`, true);
+            imageOutputDiv.innerHTML = '<div class="output-text" style="color:#f87171;">图形生成失败</div>';
         } finally {
-            runBtn.disabled = false;
-            runBtn.innerHTML = originalText;
+            runBtn.disabled = false; runBtn.innerHTML = originalText;
         }
     }
 
     function undo() { if (codeMirrorEditor) codeMirrorEditor.undo(); }
     function redo() { if (codeMirrorEditor) codeMirrorEditor.redo(); }
-
     function saveCodeToFile() {
         if (!codeMirrorEditor) return;
         const code = codeMirrorEditor.getValue();
@@ -688,19 +322,16 @@ print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.href = url;
-        link.download = `python_script_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.py`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        link.download = `python_script_${Date.now()}.py`;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
         URL.revokeObjectURL(url);
         showTextOutput("✅ 代码已保存为 .py 文件", false);
     }
-
     function importPyFile() {
         if (!fileInputForImport) {
             fileInputForImport = document.createElement('input');
             fileInputForImport.type = 'file';
-            fileInputForImport.accept = '.py,.txt,.pyw,text/x-python';
+            fileInputForImport.accept = '.py,.txt,.pyw';
             fileInputForImport.style.display = 'none';
             document.body.appendChild(fileInputForImport);
             fileInputForImport.addEventListener('change', (e) => {
@@ -709,13 +340,9 @@ print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     const content = ev.target.result;
-                    if (codeMirrorEditor) {
-                        codeMirrorEditor.setValue(content);
-                        showTextOutput(`📁 已导入文件: ${file.name} (${content.length} 字符)`, false);
-                    } else {
-                        document.getElementById('codeEditor').value = content;
-                        showTextOutput(`📁 已导入文件: ${file.name}`, false);
-                    }
+                    if (codeMirrorEditor) codeMirrorEditor.setValue(content);
+                    else document.getElementById('codeEditor').value = content;
+                    showTextOutput(`📁 已导入文件: ${file.name} (${content.length} 字符)`, false);
                     fileInputForImport.value = '';
                 };
                 reader.onerror = () => { showTextOutput("❌ 读取文件失败", true); fileInputForImport.value = ''; };
@@ -739,42 +366,24 @@ print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
     function decreaseFont() { let newSize = currentFontSize - 2; if (newSize < 10) newSize = 10; setEditorFontSize(newSize); }
     function resetFont() { setEditorFontSize(14); }
 
-    // 设置菜单
     function toggleSettingsMenu() { settingsDropdown.classList.toggle('show'); }
     document.addEventListener('click', function(e) {
         if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) settingsDropdown.classList.remove('show');
     });
     settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSettingsMenu(); });
 
-    // 全屏功能
     function toggleFullscreen() {
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
             const elem = editorPanel;
-            const requestMethod = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
-            if (requestMethod) {
-                requestMethod.call(elem).then(() => {
-                    fullscreenBtn.textContent = '🗗 退出全屏';
-                    fullscreenBtn.title = '退出全屏编辑';
-                }).catch(err => showTextOutput("⚠️ 全屏请求失败", true));
-            } else showTextOutput("⚠️ 浏览器不支持全屏", true);
+            const requestMethod = elem.requestFullscreen || elem.webkitRequestFullscreen;
+            if (requestMethod) requestMethod.call(elem).catch(e => showTextOutput("全屏失败", true));
         } else {
-            const exitMethod = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-            if (exitMethod) {
-                exitMethod.call(document).then(() => {
-                    fullscreenBtn.textContent = '🖥️ 全屏';
-                    fullscreenBtn.title = '全屏编辑代码';
-                });
-            }
+            const exitMethod = document.exitFullscreen || document.webkitExitFullscreen;
+            if (exitMethod) exitMethod.call(document);
         }
     }
     function onFullscreenChange() {
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            fullscreenBtn.textContent = '🖥️ 全屏';
-            fullscreenBtn.title = '全屏编辑代码';
-        } else {
-            fullscreenBtn.textContent = '🗗 退出全屏';
-            fullscreenBtn.title = '退出全屏编辑';
-        }
+        fullscreenBtn.textContent = document.fullscreenElement ? '🗗 退出全屏' : '🖥️ 全屏';
         if (codeMirrorEditor) setTimeout(() => codeMirrorEditor.refresh(), 100);
     }
     document.addEventListener('fullscreenchange', onFullscreenChange);
@@ -784,178 +393,138 @@ print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
         if (codeMirrorEditor) codeMirrorEditor.setValue(DEFAULT_CODE);
         else document.getElementById('codeEditor').value = DEFAULT_CODE;
         clearOutput();
-        showTextOutput("📋 已重置为示例代码，点击「运行代码」体验科学计算", false);
+        showTextOutput("📋 已重置为示例代码", false);
         imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">图表将显示在此处</div>';
     }
 
-    // ---------- 文件操作 (Pyodide 虚拟文件系统) ----------
+    // 文件操作
     async function uploadFileToFS() {
-        if (!pyodideReady || !pyodide) {
-            showTextOutput("请等待 Pyodide 初始化完成后再上传文件", true);
-            return;
-        }
+        if (!pyodideReady) { showTextOutput("请等待 Pyodide 初始化完成", true); return; }
         const file = uploadFileInput.files[0];
-        if (!file) {
-            showTextOutput("请先选择要上传的文件", true);
-            return;
-        }
+        if (!file) { showTextOutput("请选择文件", true); return; }
         const reader = new FileReader();
         reader.onload = async (e) => {
             const content = e.target.result;
-            // 保存到虚拟文件系统 /home/pyodide/ 下，保留原文件名
             const filename = file.name;
             const fsPath = `/home/pyodide/${filename}`;
             try {
                 pyodide.FS.writeFile(fsPath, content);
-                showTextOutput(`✅ 文件已上传到虚拟文件系统: ${fsPath}\n可在 Python 中用 open("${fsPath}") 读取`, false);
-                // 可选：同时写入一个固定名称方便示例
-                if (filename === "user_data.txt") {
-                    // 已经写入
-                } else {
-                    // 提示
-                }
-            } catch (err) {
-                showTextOutput(`❌ 写入虚拟文件系统失败: ${err}`, true);
-            }
+                showTextOutput(`✅ 文件已上传: ${fsPath}`, false);
+            } catch (err) { showTextOutput(`上传失败: ${err}`, true); }
         };
         reader.readAsText(file, 'UTF-8');
     }
-
     async function downloadOutputFile() {
-        if (!pyodideReady || !pyodide) {
-            showTextOutput("Pyodide 未就绪", true);
-            return;
-        }
+        if (!pyodideReady) { showTextOutput("Pyodide 未就绪", true); return; }
         let filename = downloadFilenameInput.value.trim();
-        if (!filename) {
-            showTextOutput("请输入要下载的文件名", true);
-            return;
-        }
-        // 确保路径在 /home/pyodide/ 下，如果用户只输入文件名，自动补全路径
-        let fullPath = filename;
-        if (!fullPath.startsWith('/')) {
-            fullPath = `/home/pyodide/${filename}`;
-        }
+        if (!filename) { showTextOutput("请输入文件名", true); return; }
+        let fullPath = filename.startsWith('/') ? filename : `/home/pyodide/${filename}`;
         try {
             const content = pyodide.FS.readFile(fullPath, { encoding: 'utf8' });
             const blob = new Blob([content], {type: 'text/plain'});
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
-            link.href = url;
-            link.download = filename.split('/').pop();
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            link.href = url; link.download = filename.split('/').pop();
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            showTextOutput(`✅ 已下载文件: ${filename}`, false);
-        } catch (err) {
-            showTextOutput(`❌ 文件不存在或读取失败: ${err.message}`, true);
-        }
+            showTextOutput(`✅ 已下载: ${filename}`, false);
+        } catch (err) { showTextOutput(`文件不存在或读取失败: ${err.message}`, true); }
     }
-
     async function listFiles() {
-        if (!pyodideReady || !pyodide) {
-            showTextOutput("Pyodide 未就绪", true);
-            return;
-        }
+        if (!pyodideReady) { showTextOutput("Pyodide 未就绪", true); return; }
         try {
-            const files = pyodide.FS.readdir('/home/pyodide/');
-            const fileList = files.filter(f => f !== '.' && f !== '..');
-            if (fileList.length === 0) {
-                showTextOutput("📁 虚拟文件系统中暂无用户文件（除了系统目录）", false);
-            } else {
-                showTextOutput(`📁 虚拟文件系统中的文件列表:\n${fileList.join('\n')}`, false);
-            }
-        } catch (err) {
-            showTextOutput(`列出文件失败: ${err}`, true);
-        }
+            const files = pyodide.FS.readdir('/home/pyodide/').filter(f => f !== '.' && f !== '..');
+            if (files.length) showTextOutput(`📁 文件列表:\n${files.join('\n')}`, false);
+            else showTextOutput("📁 虚拟文件系统中暂无用户文件", false);
+        } catch (err) { showTextOutput(`列出文件失败: ${err}`, true); }
     }
 
-    // ---------- 智能补全核心 (快捷键改为 Ctrl+B) ----------
+    // ---------- 补全 (Ctrl+B) ----------
     const completionWords = [
-        "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
-        "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
-        "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
-        "return", "try", "while", "with", "yield",
-        "abs", "all", "any", "bin", "bool", "chr", "dict", "enumerate", "float", "format",
-        "int", "isinstance", "issubclass", "len", "list", "max", "min", "oct", "ord", "pow",
-        "print", "range", "repr", "round", "set", "sorted", "str", "sum", "tuple", "type", "zip",
-        "np", "np.array", "np.zeros", "np.ones", "np.empty", "np.linspace", "np.arange",
-        "np.random", "np.random.randn", "np.random.randint", "np.sin", "np.cos", "np.tan",
-        "np.exp", "np.log", "np.sqrt", "np.mean", "np.std", "np.var", "np.sum", "np.dot",
-        "np.linalg", "np.linalg.inv", "np.reshape", "np.transpose", "np.concatenate",
-        "plt", "plt.plot", "plt.scatter", "plt.hist", "plt.bar", "plt.imshow", "plt.subplot",
-        "plt.subplots", "plt.figure", "plt.xlabel", "plt.ylabel", "plt.title", "plt.legend",
-        "plt.grid", "plt.show", "plt.savefig", "plt.close", "plt.clf",
-        "scipy", "sp", "scipy.stats", "scipy.integrate", "scipy.special", "scipy.optimize",
-        "stats.norm", "stats.uniform", "integrate.quad", "special.gamma", "optimize.minimize"
+        "False","None","True","and","as","assert","async","await","break","class","continue","def","del","elif","else","except","finally","for","from","global","if","import","in","is","lambda","nonlocal","not","or","pass","raise","return","try","while","with","yield",
+        "abs","all","any","bin","bool","chr","dict","enumerate","float","format","int","isinstance","len","list","max","min","print","range","round","str","sum","zip",
+        "np","np.array","np.zeros","np.ones","np.linspace","np.arange","np.random","np.sin","np.cos","np.exp","np.mean","np.std",
+        "plt","plt.plot","plt.scatter","plt.hist","plt.subplots","plt.figure","plt.xlabel","plt.ylabel","plt.title","plt.legend","plt.grid","plt.show","plt.savefig",
+        "scipy","sp","scipy.stats","scipy.integrate","integrate.quad"
     ];
-
-    function pythonHint(cm, options) {
+    function pythonHint(cm) {
         const cursor = cm.getCursor();
         const token = cm.getTokenAt(cursor);
-        let start = token.start;
-        let end = cursor.ch;
-        const currentWord = token.string.slice(0, end - start);
-        if (!currentWord || currentWord.length === 0) return null;
-        const matches = completionWords.filter(word => 
-            word.toLowerCase().startsWith(currentWord.toLowerCase())
-        );
-        if (matches.length === 0) return null;
-        return {
-            list: matches,
-            from: CodeMirror.Pos(cursor.line, start),
-            to: CodeMirror.Pos(cursor.line, end)
-        };
+        let start = token.start, end = cursor.ch;
+        const word = token.string.slice(0, end - start);
+        if (!word) return null;
+        const matches = completionWords.filter(w => w.toLowerCase().startsWith(word.toLowerCase()));
+        if (!matches.length) return null;
+        return { list: matches, from: CodeMirror.Pos(cursor.line, start), to: CodeMirror.Pos(cursor.line, end) };
     }
-
-    function showCompletion() {
-        if (codeMirrorEditor) {
-            CodeMirror.commands.autocomplete(codeMirrorEditor);
-        }
-    }
-
+    function showCompletion() { if (codeMirrorEditor) CodeMirror.commands.autocomplete(codeMirrorEditor); }
     function initCodeMirror() {
         const textarea = document.getElementById('codeEditor');
         codeMirrorEditor = CodeMirror.fromTextArea(textarea, {
-            mode: 'python',
-            theme: 'material-darker',
-            lineNumbers: true,
-            indentUnit: 4,
-            tabSize: 4,
-            indentWithTabs: false,
-            lineWrapping: true,
-            autofocus: true,
+            mode: 'python', theme: 'material-darker', lineNumbers: true, indentUnit: 4, tabSize: 4,
+            lineWrapping: true, autofocus: true,
             extraKeys: {
                 "Tab": "indentMore",
-                "Ctrl-Z": function(cm) { cm.undo(); },
-                "Cmd-Z": function(cm) { cm.undo(); },
-                "Ctrl-Y": function(cm) { cm.redo(); },
-                "Cmd-Y": function(cm) { cm.redo(); },
-                "Ctrl-Shift-Z": function(cm) { cm.redo(); },
-                // 将补全快捷键改为 Ctrl+B / Cmd+B
-                "Ctrl-B": function(cm) { CodeMirror.commands.autocomplete(cm); },
-                "Cmd-B": function(cm) { CodeMirror.commands.autocomplete(cm); }
+                "Ctrl-Z": cm => cm.undo(), "Cmd-Z": cm => cm.undo(),
+                "Ctrl-Y": cm => cm.redo(), "Cmd-Y": cm => cm.redo(),
+                "Ctrl-Shift-Z": cm => cm.redo(),
+                "Ctrl-B": cm => CodeMirror.commands.autocomplete(cm),
+                "Cmd-B": cm => CodeMirror.commands.autocomplete(cm)
             },
-            hintOptions: {
-                hint: pythonHint,
-                completeSingle: false,
-                alignWithWord: false
-            }
+            hintOptions: { hint: pythonHint, completeSingle: false }
         });
         codeMirrorEditor.setValue(DEFAULT_CODE);
         codeMirrorEditor.setSize(null, 400);
         setEditorFontSize(14);
-        
-        // 额外监听 keydown 确保 Ctrl+B 生效（防止浏览器默认行为）
-        const cmWrapper = codeMirrorEditor.getWrapperElement();
-        cmWrapper.addEventListener('keydown', (e) => {
+        const wrapper = codeMirrorEditor.getWrapperElement();
+        wrapper.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.code === 'KeyB') {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 CodeMirror.commands.autocomplete(codeMirrorEditor);
             }
         });
+    }
+
+    // ---------- 下载并配置中文字体 ----------
+    async function setupChineseFont() {
+        if (!pyodide) return;
+        showTextOutput("📥 正在下载中文字体 (约5MB，仅首次)，请稍候...", false);
+        try {
+            // 使用开源 Noto Sans CJK SC 字体 (精简版，从 CDN 获取，确保跨域)
+            const fontUrl = "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@4.5.0/files/noto-sans-sc-chinese-simplified-400-normal.woff2";
+            // 但 woff2 格式 matplotlib 可能不支持，需要 ttf 格式。改用另一个可靠的 ttf 源
+            // 使用 GitHub 上的开源字体: https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf
+            // 注意 OTF 也是支持的。我们选择一个较小的 OTF 文件 (~5MB)
+            const fontUrlTtf = "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf";
+            const response = await fetch(fontUrlTtf);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const fontBlob = await response.blob();
+            const arrayBuffer = await fontBlob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            // 写入虚拟文件系统
+            pyodide.FS.writeFile('/home/pyodide/NotoSansCJKsc-Regular.otf', uint8Array);
+            // 配置 matplotlib
+            const configCode = `
+import matplotlib
+import matplotlib.pyplot as plt
+import os
+font_path = '/home/pyodide/NotoSansCJKsc-Regular.otf'
+if os.path.exists(font_path):
+    from matplotlib.font_manager import fontManager
+    fontManager.addfont(font_path)
+    plt.rcParams['font.family'] = 'sans-serif'
+    plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'DejaVu Sans']
+    plt.rcParams['axes.unicode_minus'] = False
+    print("✅ 中文字体配置成功，图表可显示中文")
+else:
+    print("⚠️ 字体文件未找到，中文可能无法显示")
+`;
+            await pyodide.runPythonAsync(configCode);
+            showTextOutput("✅ 中文字体已加载，matplotlib 现在支持中文显示。", false);
+        } catch (err) {
+            console.error("字体下载失败", err);
+            showTextOutput("⚠️ 中文字体下载失败，图表中的中文将显示为方块。可手动下载字体并上传。", true);
+        }
     }
 
     // ---------- Pyodide 初始化 ----------
@@ -963,29 +532,22 @@ print("✅ 代码执行完成，图表已生成，输出文件已写入")`;
         setProgress(5, "⏳ 加载核心...");
         try {
             pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
-            setProgress(20, "📦 加载 numpy, scipy, matplotlib ...");
-            let packageMessages = [];
-            const messageCallback = (msg) => {
+            setProgress(20, "📦 加载科学包...");
+            let pkgList = [];
+            const msgCb = (msg) => {
                 if (msg.includes("Downloading") || msg.includes("Loading")) {
-                    let pkgName = msg.split(" ")[1]?.split("-")[0] || "package";
-                    if (!packageMessages.includes(pkgName)) {
-                        packageMessages.push(pkgName);
-                        let percent = 20 + Math.min(70, (packageMessages.length / 12) * 70);
-                        setProgress(percent, `📡 ${pkgName} ...`);
-                    }
+                    let pkg = msg.split(" ")[1]?.split("-")[0] || "pkg";
+                    if (!pkgList.includes(pkg)) { pkgList.push(pkg); let p = 20 + Math.min(70, pkgList.length/12*70); setProgress(p, `📡 ${pkg} ...`); }
                 }
             };
-            await pyodide.loadPackage("numpy", { messageCallback });
+            await pyodide.loadPackage("numpy", { messageCallback: msgCb });
             setProgress(45, "✅ numpy 完成, 加载 scipy ...");
-            await pyodide.loadPackage("scipy", { messageCallback });
+            await pyodide.loadPackage("scipy", { messageCallback: msgCb });
             setProgress(70, "✅ scipy 完成, 加载 matplotlib ...");
-            await pyodide.loadPackage("matplotlib", { messageCallback });
+            await pyodide.loadPackage("matplotlib", { messageCallback: msgCb });
             setProgress(85, "✅ 科学包就绪, 配置环境...");
             
-            // 确保虚拟文件系统有 /home/pyodide 目录
-            try {
-                pyodide.FS.mkdir('/home/pyodide');
-            } catch(e) { /* 目录已存在 */ }
+            try { pyodide.FS.mkdir('/home/pyodide'); } catch(e) {}
             
             const initPythonCode = `
 import sys, io, traceback, base64
@@ -1027,8 +589,8 @@ def _add_figure_as_base64(fig):
     plt.close(fig)
 
 def _show_all_figures():
-    figs = [plt.figure(num) for num in plt.get_fignums()]
-    for fig in figs:
+    for num in plt.get_fignums():
+        fig = plt.figure(num)
         _add_figure_as_base64(fig)
     plt.close('all')
 
@@ -1050,13 +612,15 @@ def run_user_code(user_code: str):
         _show_all_figures()
         return {"output": _get_output(), "images": _image_list.copy()}
 
-print("[系统] 环境就绪 | NumPy, SciPy, Matplotlib 已加载")
-print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {matplotlib.__version__}")
+print("[系统] 基础环境就绪")
+print(f"NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {matplotlib.__version__}")
 `;
             await pyodide.runPythonAsync(initPythonCode);
             const versionOut = pyodide.runPython("_get_output()");
-            if (versionOut && versionOut.trim()) showTextOutput(versionOut.trim(), false);
-            else showTextOutput("✅ 科学计算环境已就绪，可运行代码。", false);
+            if (versionOut.trim()) showTextOutput(versionOut.trim(), false);
+            
+            // 下载中文字体（异步，不阻塞就绪状态）
+            setupChineseFont().catch(e => console.warn(e));
             
             setProgress(100, "🎉 就绪");
             setStatus("✅ 就绪", true);
@@ -1064,12 +628,12 @@ print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {mat
             runBtn.disabled = false;
             runBtn.innerHTML = "▶ 运行代码";
             const cacheHint = document.getElementById('cacheHint');
-            if (cacheHint) cacheHint.innerHTML = "💾 已缓存 | 秒开";
+            if (cacheHint) cacheHint.innerHTML = "💾 已缓存 | 中文字体已启用";
         } catch (err) {
             console.error(err);
             setProgress(0, "❌ 加载失败");
             setStatus("❌ 初始化失败", false);
-            showTextOutput(`致命错误: 无法加载 Pyodide 或科学包\n${err}`, true);
+            showTextOutput(`致命错误: ${err}`, true);
             runBtn.disabled = true;
             runBtn.innerHTML = "加载失败";
         }
