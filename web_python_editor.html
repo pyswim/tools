@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>Python科学计算器 | 全屏编辑 | 保存/导入.py | 字体缩放</title>
-    <!-- CodeMirror 依赖 (语法高亮) -->
+    <title>Python科学计算器 | 智能补全 (Ctrl+B) | 全屏编辑</title>
+    <!-- CodeMirror 核心 + 语法高亮 + 补全插件 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/hint/show-hint.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/hint/show-hint.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -140,7 +142,6 @@
             align-items: center;
         }
 
-        /* CodeMirror 容器 */
         .CodeMirror {
             height: 400px;
             border-radius: 1rem;
@@ -155,6 +156,25 @@
         }
         .CodeMirror-linenumber {
             color: #64748b;
+        }
+        /* 补全弹窗深色主题 */
+        .CodeMirror-hints {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 12px;
+            color: #e2e8f0;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            z-index: 300;
+        }
+        .CodeMirror-hint {
+            color: #cbd5e1;
+            padding: 6px 10px;
+        }
+        .CodeMirror-hint-active {
+            background: #2563eb;
+            color: white;
         }
 
         .button-group {
@@ -287,7 +307,6 @@
             text-align: center;
         }
 
-        /* 设置菜单样式 */
         .settings-menu {
             position: relative;
             display: inline-block;
@@ -341,7 +360,6 @@
                 min-width: 140px;
             }
         }
-        /* 全屏时样式微调 (全屏API下容器样式自动适配，无需额外样式) */
         .file-input-hidden {
             display: none;
         }
@@ -352,6 +370,14 @@
             padding: 3px 8px;
             border-radius: 30px;
         }
+        kbd {
+            background: #1e293b;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            border: 1px solid #475569;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 </head>
@@ -360,7 +386,7 @@
     <div class="header">
         <div class="title">
             🐍 Python 科学计算器
-            <span class="badge">全屏编辑 + 保存/导入 .py</span>
+            <span class="badge">智能补全 (<kbd>Ctrl+B</kbd>)</span>
         </div>
         <div class="status-area">
             <div class="progress-bar-container">
@@ -374,7 +400,7 @@
     <div class="workspace">
         <div class="editor-panel" id="editorPanel">
             <div class="panel-label">
-                📝 代码编辑器 (语法高亮)
+                📝 代码编辑器 (语法高亮 + 智能补全)
                 <span class="cache-note" id="cacheHint">📦 缓存加速</span>
             </div>
             <textarea id="codeEditor" placeholder='import numpy as np
@@ -398,6 +424,7 @@ print("NumPy版本:", np.__version__)'></textarea>
                 <button id="redoBtn" title="重做 (Ctrl+Y)">↪️ 重做</button>
                 <button id="saveBtn" title="保存代码到 .py 文件">💾 保存代码</button>
                 <button id="importBtn" title="导入 .py 文件">📂 导入.py</button>
+                <button id="completionBtn" title="手动触发补全 (Ctrl+Space)">📋 补全</button>
                 <div class="settings-menu">
                     <button id="settingsBtn" title="设置菜单">⚙️ 设置</button>
                     <div id="settingsDropdown" class="settings-dropdown">
@@ -411,7 +438,8 @@ print("NumPy版本:", np.__version__)'></textarea>
                 <button id="resetEditorBtn">⟳ 重置示例</button>
             </div>
             <div class="tip">
-                💡 支持 NumPy, SciPy, Matplotlib | 可保存/导入 .py | 字体缩放 | 全屏编辑
+                💡 提示: 按 <kbd>Ctrl+Space</kbd> (Windows/Linux) 或 <kbd>Cmd+Space</kbd> (Mac) 触发代码补全。<br>
+                支持 Python 关键字、内置函数、NumPy/SciPy/Matplotlib 常用符号。如果快捷键被系统占用，请使用「补全」按钮。
             </div>
         </div>
         <div class="output-panel">
@@ -454,11 +482,11 @@ print("NumPy版本:", np.__version__)'></textarea>
     const fontResetBtn = document.getElementById('fontResetBtn');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     const editorPanel = document.getElementById('editorPanel');
+    const completionBtn = document.getElementById('completionBtn');
     
-    // 隐藏的文件上传input
     let fileInput = null;
 
-    // 示例代码 (完整科学计算演示)
+    // 示例代码
     const DEFAULT_CODE = `import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -483,18 +511,14 @@ plt.show()`;
     function setProgress(percent, message) {
         progressBar.style.width = `${Math.min(100, percent)}%`;
         statusDiv.innerHTML = message;
-        if (percent >= 100 && pyodideReady) {
-            statusDiv.innerHTML = "✅ 就绪";
-        }
+        if (percent >= 100 && pyodideReady) statusDiv.innerHTML = "✅ 就绪";
     }
-
     function setStatus(text, isReady = false) {
         statusDiv.innerHTML = text;
         if (isReady) statusDiv.classList.add('ready');
         else statusDiv.classList.remove('ready');
     }
 
-    // 清空输出
     function clearOutput() {
         textOutputDiv.innerHTML = '<div class="output-text">✨ 输出已清空，重新运行将显示新内容。</div>';
         imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">暂无图像，运行代码后 plt.show() 将显示图表</div>';
@@ -510,7 +534,6 @@ plt.show()`;
         textOutputDiv.scrollTop = textOutputDiv.scrollHeight;
     }
 
-    // 显示图像并附加保存按钮
     function showImages(imagesBase64List) {
         if (!imagesBase64List || imagesBase64List.length === 0) {
             imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">📊 本次运行未生成图表 (无 plt.show() 或没有图形)</div>';
@@ -526,20 +549,17 @@ plt.show()`;
             img.src = imgSrc;
             img.alt = `Matplotlib Figure ${i+1}`;
             img.title = "点击按钮保存图片";
-            
             const saveBtn = document.createElement('button');
             saveBtn.textContent = '💾 保存为 PNG';
             saveBtn.className = 'save-btn';
             saveBtn.onclick = (function(src, idx) {
                 return function() { downloadImage(src, `plot_${Date.now()}_${idx+1}.png`); };
             })(imgSrc, i);
-            
             const caption = document.createElement('div');
             caption.style.fontSize = '11px';
             caption.style.marginTop = '6px';
             caption.style.color = '#94a3b8';
             caption.innerText = `图表 ${i+1}`;
-            
             card.appendChild(img);
             card.appendChild(saveBtn);
             card.appendChild(caption);
@@ -576,20 +596,15 @@ plt.show()`;
         imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">⏳ 渲染图形中...</div>';
         
         try {
-            const result = pyodide.runPython(`
-run_user_code(${JSON.stringify(code)})
-`);
+            const result = pyodide.runPython(`run_user_code(${JSON.stringify(code)})`);
             const resultObj = result.toJs();
             const outputText = resultObj.get('output') || '';
             const imagesList = resultObj.get('images') || [];
-            
             if (outputText.trim().length > 0) showTextOutput(outputText, false);
             else if (imagesList.length === 0) showTextOutput("✔️ 代码执行完成，没有控制台输出。", false);
             else showTextOutput("✔️ 代码执行完成，已生成图表。", false);
-            
             if (imagesList.length > 0) showImages(imagesList);
             else if (imageOutputDiv.innerHTML.includes('⏳')) imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">本次运行未检测到 Matplotlib 图形</div>';
-            
             result.destroy();
         } catch (err) {
             console.error(err);
@@ -603,11 +618,9 @@ run_user_code(${JSON.stringify(code)})
         }
     }
 
-    // 撤销/重做
     function undo() { if (codeMirrorEditor) codeMirrorEditor.undo(); }
     function redo() { if (codeMirrorEditor) codeMirrorEditor.redo(); }
 
-    // 保存代码到本地 .py
     function saveCodeToFile() {
         if (!codeMirrorEditor) return;
         const code = codeMirrorEditor.getValue();
@@ -621,14 +634,8 @@ run_user_code(${JSON.stringify(code)})
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         showTextOutput("✅ 代码已保存为 .py 文件", false);
-        setTimeout(() => {
-            if (textOutputDiv.innerHTML.includes("✅ 代码已保存")) {
-                // 可选清除提示，但不影响主要输出
-            }
-        }, 2000);
     }
 
-    // 导入 .py 文件
     function importPyFile() {
         if (!fileInput) {
             fileInput = document.createElement('input');
@@ -651,17 +658,14 @@ run_user_code(${JSON.stringify(code)})
                     }
                     fileInput.value = '';
                 };
-                reader.onerror = () => {
-                    showTextOutput("❌ 读取文件失败", true);
-                    fileInput.value = '';
-                };
+                reader.onerror = () => { showTextOutput("❌ 读取文件失败", true); fileInput.value = ''; };
                 reader.readAsText(file, 'UTF-8');
             });
         }
         fileInput.click();
     }
 
-    // 字体缩放功能
+    // 字体缩放
     let currentFontSize = 14;
     function setEditorFontSize(size) {
         if (!codeMirrorEditor) return;
@@ -671,66 +675,38 @@ run_user_code(${JSON.stringify(code)})
         codeMirrorEditor.refresh();
         currentFontSize = size;
     }
-    function increaseFont() {
-        let newSize = currentFontSize + 2;
-        if (newSize > 28) newSize = 28;
-        setEditorFontSize(newSize);
-    }
-    function decreaseFont() {
-        let newSize = currentFontSize - 2;
-        if (newSize < 10) newSize = 10;
-        setEditorFontSize(newSize);
-    }
-    function resetFont() {
-        setEditorFontSize(14);
-    }
+    function increaseFont() { let newSize = currentFontSize + 2; if (newSize > 28) newSize = 28; setEditorFontSize(newSize); }
+    function decreaseFont() { let newSize = currentFontSize - 2; if (newSize < 10) newSize = 10; setEditorFontSize(newSize); }
+    function resetFont() { setEditorFontSize(14); }
 
-    // 设置菜单显示/隐藏
-    function toggleSettingsMenu() {
-        settingsDropdown.classList.toggle('show');
-    }
+    // 设置菜单
+    function toggleSettingsMenu() { settingsDropdown.classList.toggle('show'); }
     document.addEventListener('click', function(e) {
-        if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
-            settingsDropdown.classList.remove('show');
-        }
+        if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) settingsDropdown.classList.remove('show');
     });
-    settingsBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleSettingsMenu();
-    });
+    settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSettingsMenu(); });
 
-    // 全屏功能 (使用Fullscreen API)
+    // 全屏功能
     function toggleFullscreen() {
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            // 进入全屏
             const elem = editorPanel;
             const requestMethod = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
             if (requestMethod) {
                 requestMethod.call(elem).then(() => {
                     fullscreenBtn.textContent = '🗗 退出全屏';
                     fullscreenBtn.title = '退出全屏编辑';
-                }).catch(err => {
-                    console.warn(`全屏失败: ${err.message}`);
-                    showTextOutput("⚠️ 全屏请求被拒绝或浏览器不支持", true);
-                });
-            } else {
-                showTextOutput("⚠️ 当前浏览器不支持全屏API", true);
-            }
+                }).catch(err => showTextOutput("⚠️ 全屏请求失败", true));
+            } else showTextOutput("⚠️ 浏览器不支持全屏", true);
         } else {
-            // 退出全屏
             const exitMethod = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
             if (exitMethod) {
                 exitMethod.call(document).then(() => {
                     fullscreenBtn.textContent = '🖥️ 全屏';
                     fullscreenBtn.title = '全屏编辑代码';
-                }).catch(err => {
-                    console.warn(`退出全屏失败: ${err.message}`);
                 });
             }
         }
     }
-
-    // 监听全屏变化事件，同步按钮文字
     function onFullscreenChange() {
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
             fullscreenBtn.textContent = '🖥️ 全屏';
@@ -739,27 +715,72 @@ run_user_code(${JSON.stringify(code)})
             fullscreenBtn.textContent = '🗗 退出全屏';
             fullscreenBtn.title = '退出全屏编辑';
         }
-        // 全屏切换后 CodeMirror 布局可能变化，刷新一下
-        if (codeMirrorEditor) {
-            setTimeout(() => codeMirrorEditor.refresh(), 100);
-        }
+        if (codeMirrorEditor) setTimeout(() => codeMirrorEditor.refresh(), 100);
     }
     document.addEventListener('fullscreenchange', onFullscreenChange);
     document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
-    // 重置编辑器内容
     function resetEditor() {
-        if (codeMirrorEditor) {
-            codeMirrorEditor.setValue(DEFAULT_CODE);
-        } else {
-            document.getElementById('codeEditor').value = DEFAULT_CODE;
-        }
+        if (codeMirrorEditor) codeMirrorEditor.setValue(DEFAULT_CODE);
+        else document.getElementById('codeEditor').value = DEFAULT_CODE;
         clearOutput();
         showTextOutput("📋 已重置为示例代码，点击「运行代码」体验科学计算", false);
         imageOutputDiv.innerHTML = '<div class="output-text" style="color:#64748b;">图表将显示在此处</div>';
     }
 
-    // 初始化 CodeMirror
+    // ---------- 智能补全核心 (修复 Ctrl+Space 快捷键) ----------
+    // 丰富的补全词库 (Python 关键字 + 内置 + numpy/scipy/matplotlib 常用符号)
+    const completionWords = [
+        // Python 关键字
+        "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
+        "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
+        "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
+        "return", "try", "while", "with", "yield",
+        // 内置函数
+        "abs", "all", "any", "bin", "bool", "chr", "dict", "enumerate", "float", "format",
+        "int", "isinstance", "issubclass", "len", "list", "max", "min", "oct", "ord", "pow",
+        "print", "range", "repr", "round", "set", "sorted", "str", "sum", "tuple", "type", "zip",
+        // numpy 常用
+        "np", "np.array", "np.zeros", "np.ones", "np.empty", "np.linspace", "np.arange",
+        "np.random", "np.random.randn", "np.random.randint", "np.sin", "np.cos", "np.tan",
+        "np.exp", "np.log", "np.sqrt", "np.mean", "np.std", "np.var", "np.sum", "np.dot",
+        "np.linalg", "np.linalg.inv", "np.reshape", "np.transpose", "np.concatenate",
+        // matplotlib 常用
+        "plt", "plt.plot", "plt.scatter", "plt.hist", "plt.bar", "plt.imshow", "plt.subplot",
+        "plt.subplots", "plt.figure", "plt.xlabel", "plt.ylabel", "plt.title", "plt.legend",
+        "plt.grid", "plt.show", "plt.savefig", "plt.close", "plt.clf",
+        // scipy 常用
+        "scipy", "sp", "scipy.stats", "scipy.integrate", "scipy.special", "scipy.optimize",
+        "stats.norm", "stats.uniform", "integrate.quad", "special.gamma", "optimize.minimize"
+    ];
+
+    // 自定义补全函数
+    function pythonHint(cm, options) {
+        const cursor = cm.getCursor();
+        const token = cm.getTokenAt(cursor);
+        let start = token.start;
+        let end = cursor.ch;
+        const currentWord = token.string.slice(0, end - start);
+        if (!currentWord || currentWord.length === 0) return null;
+        const matches = completionWords.filter(word => 
+            word.toLowerCase().startsWith(currentWord.toLowerCase())
+        );
+        if (matches.length === 0) return null;
+        return {
+            list: matches,
+            from: CodeMirror.Pos(cursor.line, start),
+            to: CodeMirror.Pos(cursor.line, end)
+        };
+    }
+
+    // 手动触发补全 (供按钮调用)
+    function showCompletion() {
+        if (codeMirrorEditor) {
+            CodeMirror.commands.autocomplete(codeMirrorEditor);
+        }
+    }
+
+    // 初始化 CodeMirror 并绑定补全，修复 Ctrl+Space 快捷键
     function initCodeMirror() {
         const textarea = document.getElementById('codeEditor');
         codeMirrorEditor = CodeMirror.fromTextArea(textarea, {
@@ -777,23 +798,45 @@ run_user_code(${JSON.stringify(code)})
                 "Cmd-Z": function(cm) { cm.undo(); },
                 "Ctrl-Y": function(cm) { cm.redo(); },
                 "Cmd-Y": function(cm) { cm.redo(); },
-                "Ctrl-Shift-Z": function(cm) { cm.redo(); }
+                "Ctrl-Shift-Z": function(cm) { cm.redo(); },
+                // 显式绑定 Ctrl+Space / Cmd+Space 到 autocomplete 命令
+                "Ctrl-B": function(cm) { CodeMirror.commands.autocomplete(cm); },
+                "Cmd-B": function(cm) { CodeMirror.commands.autocomplete(cm); }
+            },
+            hintOptions: {
+                hint: pythonHint,
+                completeSingle: false,
+                alignWithWord: false
             }
         });
         codeMirrorEditor.setValue(DEFAULT_CODE);
         codeMirrorEditor.setSize(null, 400);
         setEditorFontSize(14);
+        
+        // 额外增强：直接在编辑器 DOM 上监听 keydown 事件，防止浏览器默认行为（如输入法切换）
+        // 这可以确保即使 extraKeys 因为某些原因失效，也能触发补全
+        const cmWrapper = codeMirrorEditor.getWrapperElement();
+        cmWrapper.addEventListener('keydown', (e) => {
+            // 检查 Ctrl+Space 或 Cmd+Space
+            if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
+                e.preventDefault();
+                e.stopPropagation();
+                CodeMirror.commands.autocomplete(codeMirrorEditor);
+            }
+        });
+        
+        // 确保 autocomplete 命令存在
+        if (!CodeMirror.commands.autocomplete) {
+            console.warn("autocomplete command missing, but show-hint should register it.");
+        }
     }
 
     // ---------- Pyodide 初始化 ----------
     async function initPyodide() {
         setProgress(5, "⏳ 加载核心...");
         try {
-            pyodide = await loadPyodide({
-                indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/",
-            });
+            pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
             setProgress(20, "📦 加载 numpy, scipy, matplotlib ...");
-            
             let packageMessages = [];
             const messageCallback = (msg) => {
                 if (msg.includes("Downloading") || msg.includes("Loading")) {
@@ -805,7 +848,6 @@ run_user_code(${JSON.stringify(code)})
                     }
                 }
             };
-            
             await pyodide.loadPackage("numpy", { messageCallback });
             setProgress(45, "✅ numpy 完成, 加载 scipy ...");
             await pyodide.loadPackage("scipy", { messageCallback });
@@ -880,7 +922,6 @@ print("[系统] 环境就绪 | NumPy, SciPy, Matplotlib 已加载")
 print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {matplotlib.__version__}")
 `;
             await pyodide.runPythonAsync(initPythonCode);
-            
             const versionOut = pyodide.runPython("_get_output()");
             if (versionOut && versionOut.trim()) showTextOutput(versionOut.trim(), false);
             else showTextOutput("✅ 科学计算环境已就绪，可运行代码。", false);
@@ -890,7 +931,6 @@ print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {mat
             pyodideReady = true;
             runBtn.disabled = false;
             runBtn.innerHTML = "▶ 运行代码";
-            
             const cacheHint = document.getElementById('cacheHint');
             if (cacheHint) cacheHint.innerHTML = "💾 已缓存 | 秒开";
         } catch (err) {
@@ -903,7 +943,7 @@ print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {mat
         }
     }
     
-    // 页面启动
+    // 启动
     (function main() {
         initCodeMirror();
         runBtn.disabled = true;
@@ -919,6 +959,7 @@ print(f"[版本] NumPy {np.__version__}, SciPy {sp.__version__}, Matplotlib {mat
         fontDecreaseBtn.addEventListener('click', decreaseFont);
         fontResetBtn.addEventListener('click', resetFont);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
+        completionBtn.addEventListener('click', showCompletion);
         initPyodide();
     })();
 </script>
